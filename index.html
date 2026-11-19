@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Questionário da Maria Luísa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+/* Layout: uma coluna estreita, uma seção por tela, barra de progresso fixa no topo. */
+:root {
+  --bg: #f4f2f7;
+  --surface: #ffffff;
+  --ink: #2b2236;
+  --muted: #6d6479;
+  --line: #e2dde9;
+  --accent: #6b4f8f;
+  --accent-soft: #ece5f5;
+  --accent-ink: #ffffff;
+  --ok: #2f7d62;
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-body: "Nunito Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #19151f; --surface: #231e2b; --ink: #eee9f4; --muted: #a89fb5;
+    --line: #3a3245; --accent: #b79be0; --accent-soft: #33294a; --accent-ink: #1b1424; --ok: #6cc7a3;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #19151f; --surface: #231e2b; --ink: #eee9f4; --muted: #a89fb5;
+  --line: #3a3245; --accent: #b79be0; --accent-soft: #33294a; --accent-ink: #1b1424; --ok: #6cc7a3;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 17px; line-height: 1.5; }
+.top { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+.top-in { max-width: 680px; margin: 0 auto; padding: 10px 16px; display: grid; gap: 6px; }
+.top-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 14px; color: var(--muted); }
+.bar { height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+.save { font-size: 13px; }
+.save.ok { color: var(--ok); }
+main { max-width: 680px; margin: 0 auto; padding: 24px 16px 120px; display: grid; gap: 20px; }
+h1, h2 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; margin: 0; line-height: 1.2; }
+h1 { font-size: 32px; }
+h2 { font-size: 26px; }
+.eyebrow { font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+.lead { color: var(--muted); margin: 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 12px; }
+.q-label { font-weight: 700; margin: 0; }
+.q-help { color: var(--muted); font-size: 15px; margin: -6px 0 0; }
+.opt-tag { font-weight: 400; color: var(--muted); font-size: 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font: inherit; font-size: 15px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); padding: 8px 14px; border-radius: 99px; cursor: pointer; text-align: left; }
+.chip:hover { border-color: var(--accent); }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.chip:disabled { opacity: .45; cursor: not-allowed; }
+.chip .sw { display: inline-block; width: 14px; height: 14px; border-radius: 50%; vertical-align: -2px; margin-right: 6px; border: 1px solid rgba(0,0,0,.15); }
+.scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.scale .chip { text-align: center; padding: 10px 0; border-radius: 10px; font-variant-numeric: tabular-nums; }
+.scale-ends { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+input[type="text"], input[type="number"], input[type="time"], textarea {
+  font: inherit; width: 100%; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink);
+}
+textarea { min-height: 96px; resize: vertical; }
+input:focus, textarea:focus, .chip:focus-visible, .btn:focus-visible { outline: 3px solid var(--accent-soft); outline-offset: 1px; border-color: var(--accent); }
+.nav { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); }
+.nav-in { max-width: 680px; margin: 0 auto; padding: 12px 16px; display: flex; gap: 10px; justify-content: space-between; }
+.btn { font: inherit; font-weight: 700; border-radius: 10px; padding: 12px 20px; cursor: pointer; border: 1.5px solid var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn[hidden] { display: none; }
+.note { background: var(--accent-soft); border-radius: 12px; padding: 14px 16px; font-size: 15px; display: grid; gap: 6px; }
+.note p { margin: 0; }
+.toc { display: grid; gap: 6px; padding: 0; margin: 0; list-style: none; }
+.toc button { font: inherit; width: 100%; display: flex; justify-content: space-between; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; color: var(--ink); cursor: pointer; text-align: left; }
+.toc .n { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.toc .done { color: var(--ok); }
+.copybox { display: grid; gap: 8px; }
+@media (prefers-reduced-motion: reduce) { .bar > i { transition: none; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="top-row"><span id="stepname">Boas-vindas</span><span class="save" id="save">Ainda nada salvo</span></div>
+    <div class="bar" aria-hidden="true"><i id="bar"></i></div>
+  </div>
+</header>
+<main id="main"></main>
+<nav class="nav">
+  <div class="nav-in">
+    <button class="btn ghost" id="prev" type="button">Voltar</button>
+    <button class="btn primary" id="next" type="button">Começar</button>
+  </div>
+</nav>
+<script>
+const OUTRO = "Outro";
+const S = [
+{ id: "voce", title: "Sobre você", intro: "Para o app conversar com a sua rotina de verdade.", qs: [
+  { id: "nome", t: "text", l: "Como você gosta de ser chamada?", h: "É assim que o app vai te cumprimentar." },
+  { id: "idade", t: "number", l: "Quantos anos você tem?", o: true },
+  { id: "cidade", t: "text", l: "Em que cidade você mora?", o: true },
+  { id: "mora", t: "radio", l: "Você mora com quem?", ops: ["Sozinha", "Com companheiro(a)", "Com a família", "Com amigas", OUTRO] },
+  { id: "pets", t: "radio", l: "Tem pets?", ops: ["Sim", "Não"] },
+  { id: "pets_quais", t: "text", l: "Quais e como se chamam?", o: true, when: ["pets", ["Sim"]], h: "Dá para lembrar de vacina, vermífugo e banho." },
+  { id: "acorda", t: "time", l: "Que horas você costuma acordar nos dias de trabalho?" },
+  { id: "dorme", t: "time", l: "E que horas costuma dormir?" },
+  { id: "dia_tipico", t: "area", l: "Descreva um dia normal seu, do acordar ao dormir.", h: "Pode ser em tópicos: café, trânsito, tribunal, almoço, treino, noite…" },
+  { id: "fds", t: "area", l: "E como costuma ser o seu fim de semana?", o: true },
+  { id: "energia", t: "radio", l: "Em que parte do dia você rende mais?", ops: ["Manhã", "Tarde", "Noite", "Varia muito"] },
+  { id: "organizada", t: "scale", l: "Hoje, quão organizada você sente que a sua vida está?", ends: ["Um caos", "Muito organizada"] }
+]},
+{ id: "hoje", title: "Como você se organiza hoje", intro: "O que já funciona e o que te irrita, para o app não repetir os erros dos outros.", qs: [
+  { id: "ferramentas", t: "check", l: "O que você usa hoje para se organizar?", ops: ["Google Agenda", "Calendário do celular", "Agenda de papel", "Bloco de notas do celular", "Mensagem no WhatsApp para mim mesma", "Lembretes do celular", "Planilha", "Notion", "App de menstruação", "App de treino", "App de dieta", "Deixo tudo na cabeça", OUTRO] },
+  { id: "apps_gosta", t: "area", l: "Quais apps você usa e gosta? O que tem de bom neles?", o: true },
+  { id: "apps_irrita", t: "area", l: "O que faz você desistir de um app?", h: "Exemplos: muita propaganda, ter que pagar, difícil de usar, notificação demais." },
+  { id: "esquece", t: "check", l: "O que você mais esquece ou deixa passar?", ops: ["Prazos do trabalho", "Tomar remédio", "Beber água", "Consultas médicas", "Contas a pagar", "Aniversários", "Compras de mercado", "Treinar", "Responder mensagens", OUTRO] },
+  { id: "maior_dor", t: "area", l: "Qual é a coisa que mais te atrapalha hoje para se organizar?" },
+  { id: "varinha", t: "area", l: "Se o app pudesse resolver só uma coisa da sua vida a partir de amanhã, qual seria?" }
+]},
+{ id: "tribunal", title: "Seu trabalho no tribunal", intro: "Quero entender o fluxo dos seus casos, prazos e documentos. Não coloque nomes de partes nem dados de processos aqui.", qs: [
+  { id: "orgao", t: "text", l: "Em qual tribunal ou órgão você trabalha?", o: true, h: "Exemplo: TJAM, TRT, TRF, Defensoria." },
+  { id: "cargo", t: "text", l: "Qual é o seu cargo e lotação (vara, núcleo, setor)?", o: true },
+  { id: "area", t: "check", l: "Com que tipo de caso você trabalha?", ops: ["Família (guarda, convivência, alienação parental)", "Infância e juventude (adoção, acolhimento, medidas protetivas)", "Violência doméstica", "Criminal ou execução penal", "Depoimento especial de crianças e adolescentes", "Saúde do servidor ou gestão de pessoas", OUTRO] },
+  { id: "documentos", t: "check", l: "Que documentos você produz?", ops: ["Laudo psicológico", "Estudo psicossocial", "Relatório", "Parecer", "Informação técnica", "Atas e registros de atendimento", OUTRO] },
+  { id: "volume", t: "radio", l: "Quantos casos novos chegam para você por mês, mais ou menos?", ops: ["Até 5", "6 a 10", "11 a 20", "21 a 40", "Mais de 40", "Não sei dizer"] },
+  { id: "prazo", t: "radio", l: "Qual costuma ser o prazo para entregar um documento?", ops: ["Até 10 dias", "10 a 20 dias", "Cerca de 30 dias", "Mais de 30 dias", "Varia muito"] },
+  { id: "controle_prazo", t: "area", l: "Como você controla esses prazos hoje?", h: "Planilha, sistema do tribunal, caderno, de cabeça…" },
+  { id: "etapas", t: "check", l: "O que um caso costuma envolver até a entrega?", ops: ["Leitura dos autos", "Entrevistas com as partes", "Visita domiciliar", "Contato com escola ou rede (CRAS, CREAS, Conselho Tutelar)", "Aplicação de testes psicológicos", "Audiências", "Discussão com a assistente social", "Escrita e revisão do documento", OUTRO] },
+  { id: "quadro", t: "radio", l: "Você gostaria de acompanhar cada caso por etapas?", h: "Como um quadro: a fazer → entrevistas → escrevendo → entregue.", ops: ["Sim", "Talvez", "Não, só preciso do prazo final"] },
+  { id: "sigilo", t: "radio", l: "Por sigilo, como prefere identificar os casos no app?", ops: ["Só pelo número do processo", "Por um código que eu mesma crio", "Pelas iniciais", "Não quero casos no app, só tarefas genéricas"] },
+  { id: "sistema", t: "check", l: "Qual sistema processual você usa?", o: true, ops: ["PJe", "eproc", "SAJ", "Projudi", "SEEU", OUTRO, "Não sei"] },
+  { id: "modelo", t: "radio", l: "Como é o seu regime de trabalho?", ops: ["Presencial", "Híbrido", "Teletrabalho"] },
+  { id: "horario_trab", t: "text", l: "Qual é o seu horário no tribunal?", h: "Exemplo: 8h às 14h." },
+  { id: "fora", t: "radio", l: "Você faz atendimentos ou visitas fora do fórum?", ops: ["Sim, com frequência", "Às vezes", "Não"] },
+  { id: "metas", t: "radio", l: "Existem metas de produtividade no seu setor?", ops: ["Sim", "Não", "Não sei"] },
+  { id: "trab_dores", t: "area", l: "Quais são as maiores dificuldades do seu trabalho no tribunal?" },
+  { id: "trab_auto", t: "area", l: "Tem algo do trabalho que você faz à mão e queria que fosse automático?", o: true }
+]},
+{ id: "consultorio", title: "Atendimentos fora do tribunal", intro: "Se você atende ou pensa em atender pacientes particulares.", qs: [
+  { id: "particular", t: "radio", l: "Você atende pacientes particulares?", ops: ["Sim, já atendo", "Ainda não, mas quero começar", "Não, e não pretendo"] },
+  { id: "modalidade", t: "check", l: "Presencial ou online?", ops: ["Presencial", "Online"], when: ["particular", ["Sim, já atendo", "Ainda não, mas quero começar"]] },
+  { id: "pac_semana", t: "radio", l: "Quantos atendimentos por semana (ou quantos gostaria)?", ops: ["1 a 5", "6 a 10", "11 a 20", "Mais de 20"], when: ["particular", ["Sim, já atendo", "Ainda não, mas quero começar"]] },
+  { id: "duracao", t: "radio", l: "Quanto dura cada sessão?", ops: ["40 minutos", "50 minutos", "1 hora", "Varia"], when: ["particular", ["Sim, já atendo", "Ainda não, mas quero começar"]] },
+  { id: "freq_pac", t: "check", l: "Com que frequência os pacientes vêm?", ops: ["Semanal", "Quinzenal", "Mensal", "Avulso"], when: ["particular", ["Sim, já atendo", "Ainda não, mas quero começar"]] },
+  { id: "marcacao", t: "check", l: "Como os pacientes marcam horário hoje?", ops: ["WhatsApp", "Ligação", "Link de agendamento", "Secretária", OUTRO], when: ["particular", ["Sim, já atendo"]] },
+  { id: "link", t: "radio", l: "Você gostaria que os pacientes marcassem sozinhos por um link, nos horários que você liberar?", ops: ["Sim", "Talvez", "Não"], when: ["particular", ["Sim, já atendo", "Ainda não, mas quero começar"]] },
+  { id: "faltas", t: "scale", l: "Quanto as faltas e cancelamentos de última hora te atrapalham?", ends: ["Nada", "Muito"], when: ["particular", ["Sim, já atendo"]] },
+  { id: "lembrete_pac", t: "radio", l: "Quer que o app lembre o paciente da sessão?", ops: ["Sim, por WhatsApp", "Sim, por e-mail", "Não"], when: ["particular", ["Sim, já atendo", "Ainda não, mas quero começar"]] },
+  { id: "cobra_falta", t: "radio", l: "Você cobra a sessão quando o paciente falta sem avisar?", ops: ["Sim", "Não", "Depende"], when: ["particular", ["Sim, já atendo"]] },
+  { id: "financeiro", t: "check", l: "O que você quer controlar do dinheiro dos atendimentos?", ops: ["Quem pagou e quem está devendo", "Valor por sessão ou pacote", "Recibos", "Carnê-Leão e Receita Saúde", "Despesas do consultório", "Quanto ganhei no mês", "Nada disso"], when: ["particular", ["Sim, já atendo", "Ainda não, mas quero começar"]] },
+  { id: "prontuario", t: "radio", l: "Onde você registra prontuário e evoluções hoje?", ops: ["Papel", "Sistema para psicólogos", "Word ou Google Docs", "Ainda não registro"], when: ["particular", ["Sim, já atendo"]] },
+  { id: "prontuario_app", t: "radio", l: "Quer registrar as evoluções das sessões dentro do app?", ops: ["Sim", "Talvez", "Não, prefiro outro lugar por sigilo"], when: ["particular", ["Sim, já atendo", "Ainda não, mas quero começar"]] },
+  { id: "sistema_psi", t: "area", l: "Já usou algum sistema de gestão para psicólogos? O que achou?", o: true, when: ["particular", ["Sim, já atendo", "Ainda não, mas quero começar"]] },
+  { id: "supervisao", t: "radio", l: "Você faz supervisão ou intervisão?", ops: ["Sim, com regularidade", "Às vezes", "Não"] },
+  { id: "estudos", t: "check", l: "Quer um espaço no app para a sua vida de estudo?", ops: ["Cursos e especializações", "Leituras e artigos", "Anotações de supervisão", "Testes psicológicos que uso e materiais", "Não precisa"] }
+]},
+{ id: "agenda", title: "Agenda e calendário", intro: "O calendário vai juntar tribunal, pacientes, saúde e vida pessoal.", qs: [
+  { id: "visao", t: "radio", l: "Como você prefere ver a agenda?", ops: ["Dia por dia", "Semana", "Mês", "Lista dos próximos compromissos"] },
+  { id: "categorias", t: "check", l: "Que categorias você quer separar por cor?", ops: ["Tribunal", "Pacientes", "Saúde", "Treino", "Pessoal", "Família", "Amigos e lazer", "Estudos", "Contas", OUTRO] },
+  { id: "integracao", t: "radio", l: "Precisa juntar com alguma agenda que você já usa?", ops: ["Google Agenda", "Calendário do iPhone", "Outlook (do tribunal)", "Não precisa"] },
+  { id: "lembrete_antes", t: "check", l: "Com quanta antecedência quer ser lembrada?", ops: ["Na hora", "15 minutos antes", "1 hora antes", "1 dia antes", "1 semana antes (para prazos)"] },
+  { id: "resumo", t: "radio", l: "Quer um resumo do seu dia?", ops: ["Sim, de manhã", "Sim, na noite anterior", "Não"] },
+  { id: "planeja", t: "radio", l: "Você gosta de planejar a semana com antecedência?", ops: ["Sim, todo domingo", "Às vezes", "Não, vou resolvendo no dia a dia"] },
+  { id: "blocos", t: "radio", l: "Quer reservar blocos de tempo na agenda?", h: "Exemplo: “escrever laudo, 14h às 16h”.", ops: ["Sim", "Talvez", "Não"] }
+]},
+{ id: "pessoal", title: "Tarefas e vida pessoal", intro: "As listas e coisas do dia a dia fora do trabalho.", qs: [
+  { id: "listas", t: "check", l: "Que listas você gostaria de ter?", ops: ["Tarefas do dia", "Lista de mercado", "Casa (limpeza, manutenção)", "Contas a pagar", "Presentes e datas especiais", "Viagens", "Filmes, séries e livros", "Metas do ano", OUTRO] },
+  { id: "jeito_tarefa", t: "radio", l: "Como prefere organizar as tarefas?", ops: ["Por data", "Por prioridade (urgente ou importante)", "Por categoria", "Bem simples, uma lista só"] },
+  { id: "recorrentes", t: "area", l: "Tem tarefas que se repetem?", o: true, h: "Exemplo: pagar aluguel dia 5, faxina no sábado, trocar a água do filtro." },
+  { id: "metas_vida", t: "area", l: "Tem alguma meta pessoal para os próximos 12 meses?", o: true },
+  { id: "financas", t: "radio", l: "Quer controle das suas finanças pessoais?", ops: ["Sim, gastos e contas", "Só contas a pagar", "Não"] },
+  { id: "aniversarios", t: "radio", l: "Quer lembrete de aniversários de família e amigos?", ops: ["Sim", "Não"] }
+]},
+{ id: "mulher", title: "Saúde da mulher", intro: "Todas as perguntas desta parte são opcionais. Se não quiser nada disso no app, marque “Não” na primeira e siga em frente.", qs: [
+  { id: "ciclo", t: "radio", l: "Quer acompanhar o ciclo menstrual no app?", ops: ["Sim", "Talvez", "Não, pode pular esta parte"], o: true },
+  { id: "ciclo_tipo", t: "radio", l: "Seu ciclo costuma ser:", o: true, ops: ["Regular", "Irregular", "Não sei", "Não menstruo (por exemplo, anticoncepcional contínuo)"], when: ["ciclo", ["Sim", "Talvez"]] },
+  { id: "ciclo_app", t: "text", l: "Usa algum app de ciclo hoje? Qual?", o: true, when: ["ciclo", ["Sim", "Talvez"]] },
+  { id: "ciclo_reg", t: "check", l: "O que gostaria de registrar?", o: true, ops: ["Dias de menstruação", "Fluxo", "Cólica ou dor", "Humor", "TPM", "Libido", "Sono", "Inchaço", "Pele e acne", "Dor de cabeça", "Corrimento", "Relação sexual", OUTRO], when: ["ciclo", ["Sim", "Talvez"]] },
+  { id: "previsao", t: "radio", l: "Quer previsões?", o: true, ops: ["Da próxima menstruação", "Da menstruação e do período fértil", "Nenhuma"], when: ["ciclo", ["Sim", "Talvez"]] },
+  { id: "ciclo_aviso", t: "radio", l: "Quer aviso antes da menstruação?", o: true, ops: ["2 dias antes", "No dia", "Não precisa"], when: ["ciclo", ["Sim", "Talvez"]] },
+  { id: "contracep", t: "radio", l: "Usa algum método que precisa de lembrete?", o: true, ops: ["Pílula diária", "Injeção mensal ou trimestral", "Anel ou adesivo", "DIU ou implante (lembrete de troca)", "Não preciso de lembrete", "Prefiro não dizer"] },
+  { id: "condicoes", t: "check", l: "Alguma condição que gostaria de acompanhar?", o: true, ops: ["SOP", "Endometriose", "Enxaqueca", "Ansiedade", "Tireoide", OUTRO, "Nenhuma", "Prefiro não dizer"] },
+  { id: "fase_dicas", t: "radio", l: "Quer dicas de treino e alimentação conforme a fase do ciclo?", o: true, ops: ["Sim", "Talvez", "Não"], when: ["ciclo", ["Sim", "Talvez"]] }
+]},
+{ id: "saude", title: "Remédios, consultas e exames", intro: "Para nada de saúde passar batido.", qs: [
+  { id: "remedios", t: "radio", l: "Você toma remédio, vitamina ou suplemento com frequência?", ops: ["Sim, todo dia", "Às vezes", "Não"], o: true },
+  { id: "rem_horarios", t: "radio", l: "Em quantos horários diferentes por dia?", ops: ["1", "2", "3", "4 ou mais"], when: ["remedios", ["Sim, todo dia", "Às vezes"]], o: true },
+  { id: "rem_func", t: "check", l: "O que seria útil para os remédios?", ops: ["Lembrete no horário", "Marcar como tomado", "Aviso quando estiver acabando", "Lembrete de renovar a receita", "Histórico para mostrar ao médico"], when: ["remedios", ["Sim, todo dia", "Às vezes"]], o: true },
+  { id: "medicos", t: "check", l: "Que profissionais de saúde você costuma consultar?", o: true, ops: ["Ginecologista", "Clínico geral", "Dentista", "Dermatologista", "Endocrinologista", "Psiquiatra", "Nutricionista", "Oftalmologista", "Fisioterapeuta", OUTRO] },
+  { id: "terapia", t: "radio", l: "Você faz terapia pessoal?", o: true, ops: ["Sim", "Já fiz", "Não"] },
+  { id: "checkup", t: "radio", l: "Quer lembrete dos check-ups do ano (preventivo, exames de sangue, dentista)?", ops: ["Sim", "Não"] },
+  { id: "exames", t: "radio", l: "Quer guardar resultados de exames (foto ou PDF) no app?", ops: ["Sim", "Não"] },
+  { id: "vacinas", t: "radio", l: "Quer controle de vacinas?", ops: ["Sim", "Não"] },
+  { id: "plano", t: "radio", l: "Tem plano de saúde?", o: true, ops: ["Sim", "Não", "Prefiro não dizer"] }
+]},
+{ id: "alimentacao", title: "Alimentação", intro: "Sem julgamento. Só para saber de onde partimos.", qs: [
+  { id: "alim_obj", t: "check", l: "O que você quer com a alimentação?", ops: ["Comer mais saudável", "Emagrecer", "Ganhar massa", "Ter mais energia", "Organizar os horários das refeições", "Melhorar a digestão", "Só registrar, sem meta", OUTRO] },
+  { id: "alim_nota", t: "scale", l: "Como você avalia a sua alimentação hoje?", ends: ["Muito ruim", "Muito boa"] },
+  { id: "refeicoes", t: "radio", l: "Quantas refeições você faz por dia?", ops: ["2", "3", "4", "5 ou mais", "Varia muito"] },
+  { id: "restricoes", t: "check", l: "Tem alguma restrição?", ops: ["Nenhuma", "Vegetariana", "Vegana", "Sem lactose", "Sem glúten", "Low carb", "Alergia alimentar", OUTRO] },
+  { id: "cozinha", t: "radio", l: "Você cozinha?", ops: ["Todo dia", "Às vezes", "Quase nunca", "Alguém cozinha para mim"] },
+  { id: "marmita", t: "radio", l: "No trabalho você:", ops: ["Leva marmita", "Às vezes leva, às vezes come fora", "Come fora", "Pede delivery"] },
+  { id: "nutri", t: "radio", l: "Acompanha com nutricionista?", ops: ["Sim, tenho um plano alimentar", "Já acompanhei", "Não"] },
+  { id: "alim_reg", t: "radio", l: "Como você gostaria de registrar o que come?", ops: ["Contando calorias e macros", "Só marcando o que comi, sem números", "Foto do prato", "Seguindo um cardápio da semana", "Não quero registrar"] },
+  { id: "agua", t: "radio", l: "Quer controle de água?", ops: ["Sim, com lembretes", "Sim, sem lembretes", "Não"] },
+  { id: "agua_hoje", t: "radio", l: "Quanto de água você bebe por dia?", o: true, ops: ["Menos de 1 litro", "1 a 2 litros", "Mais de 2 litros", "Não faço ideia"] },
+  { id: "compras", t: "radio", l: "Quer que a lista de mercado saia do cardápio da semana?", ops: ["Sim", "Não"] },
+  { id: "alim_dif", t: "area", l: "O que mais dificulta comer bem no seu dia?", o: true }
+]},
+{ id: "treino", title: "Treino e corpo", intro: "Para montar a parte de exercícios do seu jeito.", qs: [
+  { id: "treina", t: "radio", l: "Você treina hoje?", ops: ["Sim, regularmente", "Às vezes", "Parei e quero voltar", "Não treino, mas quero começar", "Não tenho interesse"] },
+  { id: "modalidades", t: "check", l: "Quais atividades você faz ou quer fazer?", ops: ["Musculação", "Corrida ou caminhada", "Pilates", "Funcional ou crossfit", "Yoga", "Dança", "Natação", "Luta", "Bike ou spinning", OUTRO], when: ["treina", ["Sim, regularmente", "Às vezes", "Parei e quero voltar", "Não treino, mas quero começar"]] },
+  { id: "treino_freq", t: "radio", l: "Quantas vezes por semana (ou quantas gostaria)?", ops: ["1 a 2", "3 a 4", "5 ou mais"], when: ["treina", ["Sim, regularmente", "Às vezes", "Parei e quero voltar", "Não treino, mas quero começar"]] },
+  { id: "treino_hora", t: "radio", l: "Em que horário?", ops: ["Manhã cedo", "Hora do almoço", "Fim da tarde", "Noite", "Varia"], when: ["treina", ["Sim, regularmente", "Às vezes", "Parei e quero voltar", "Não treino, mas quero começar"]] },
+  { id: "orientacao", t: "radio", l: "Quem monta o seu treino?", ops: ["Personal ou professor", "Ficha da academia", "Eu mesma", "Um app", "Ninguém ainda"], when: ["treina", ["Sim, regularmente", "Às vezes", "Parei e quero voltar", "Não treino, mas quero começar"]] },
+  { id: "treino_reg", t: "check", l: "O que você quer registrar?", ops: ["Ficha de treino com os exercícios", "Cargas e repetições", "Tempo e distância", "Só marcar que treinei", "Fotos de evolução", "Medidas", "Peso"], when: ["treina", ["Sim, regularmente", "Às vezes", "Parei e quero voltar", "Não treino, mas quero começar"]] },
+  { id: "treino_obj", t: "check", l: "Qual é o seu objetivo com o treino?", ops: ["Saúde", "Estética", "Força", "Condicionamento", "Aliviar o estresse", "Postura e dores"], when: ["treina", ["Sim, regularmente", "Às vezes", "Parei e quero voltar", "Não treino, mas quero começar"]] },
+  { id: "peso_quer", t: "radio", l: "Quer acompanhar peso e medidas?", ops: ["Sim", "Só medidas", "Não, prefiro não ver números"] },
+  { id: "altura_peso", t: "text", l: "Se quiser, sua altura e peso atuais.", o: true, h: "Só para cálculos como meta de água. Pode deixar em branco." },
+  { id: "relogio", t: "radio", l: "Usa relógio ou pulseira inteligente?", ops: ["Apple Watch", "Samsung", "Garmin", "Xiaomi ou Amazfit", OUTRO, "Não uso"] },
+  { id: "treino_barreira", t: "area", l: "O que te impede de treinar mais?", o: true }
+]},
+{ id: "habitos", title: "Hábitos e bem-estar", intro: "Quem cuida do emocional dos outros também precisa de cuidado.", qs: [
+  { id: "habitos", t: "check", l: "Quais hábitos você gostaria de acompanhar?", ops: ["Dormir no horário", "Beber água", "Meditar", "Ler", "Alongar", "Tomar sol", "Menos tempo no celular", "Skincare", "Escrever um diário", "Gratidão", "Oração ou espiritualidade", "Estudar", "Evitar álcool", OUTRO] },
+  { id: "sono", t: "scale", l: "Como está o seu sono?", ends: ["Muito ruim", "Muito bom"] },
+  { id: "estresse", t: "scale", l: "Como está o seu nível de estresse nas últimas semanas?", ends: ["Tranquila", "Muito estressada"] },
+  { id: "humor", t: "radio", l: "Quer registrar humor e energia do dia?", ops: ["Sim, todo dia", "De vez em quando", "Não"] },
+  { id: "esgotada", t: "radio", l: "Depois de um dia de atendimentos ou casos pesados, você costuma se sentir esgotada?", o: true, ops: ["Quase sempre", "Às vezes", "Raramente"] },
+  { id: "pausas", t: "radio", l: "Quer lembretes de pausa (respirar, alongar, beber água) entre atendimentos ou durante a escrita de laudos?", ops: ["Sim", "Talvez", "Não"] },
+  { id: "desligar", t: "area", l: "O que te ajuda a desligar do trabalho?", o: true },
+  { id: "motiva", t: "radio", l: "O que mais te motiva a manter um hábito?", ops: ["Ver a sequência de dias seguidos", "Gráficos de evolução", "Conquistas e medalhas", "Frases de incentivo", "Nada disso, só quero registrar"] },
+  { id: "tom", t: "radio", l: "Como o app deve falar com você?", ops: ["Carinhoso e acolhedor", "Direto e objetivo", "Divertido", "Firme, que me cobre"] }
+]},
+{ id: "visual", title: "O visual do app", intro: "Agora a parte divertida: a cara do app.", qs: [
+  { id: "cores", t: "colors", l: "Escolha até 3 cores que você ama.", max: 3, ops: [
+    ["Rosa antigo", "#c98b95"], ["Rosa-choque", "#e0457b"], ["Lilás", "#a98bd0"], ["Lavanda", "#c9bfe6"], ["Azul-bebê", "#a9cbe8"],
+    ["Azul-marinho", "#24365c"], ["Verde-sálvia", "#9fb39a"], ["Verde-esmeralda", "#1f7a5a"], ["Terracota", "#c0663f"], ["Pêssego", "#f3b896"],
+    ["Amarelo-manteiga", "#f2dc8b"], ["Nude", "#d9bfa8"], ["Vinho", "#6e1f33"], ["Preto e dourado", "#1c1a17"], ["Cinza", "#9a9aa0"], ["Branco", "#f7f7f5"] ] },
+  { id: "cores_nao", t: "text", l: "Tem alguma cor que você não gosta?", o: true },
+  { id: "estilo", t: "radio", l: "Qual estilo combina mais com você?", ops: ["Minimalista e limpo", "Delicado e feminino", "Elegante e sofisticado", "Colorido e alegre", "Moderno e tecnológico"] },
+  { id: "tema", t: "radio", l: "Fundo claro ou escuro?", ops: ["Claro", "Escuro", "Muda sozinho conforme o celular"] },
+  { id: "fonte", t: "radio", l: "Que tipo de letra você prefere?", ops: ["Arredondada e suave", "Reta e moderna", "Elegante nos títulos, como de revista", "Tanto faz"] },
+  { id: "densidade", t: "radio", l: "Você prefere telas:", ops: ["Com pouca coisa e bem espaçadas", "Com bastante informação de uma vez"] },
+  { id: "inicio", t: "radio", l: "O que você quer ver primeiro ao abrir o app?", ops: ["A agenda do dia", "A lista de tarefas", "Um resumo de tudo (agenda, remédios, água, ciclo)", "Uma mensagem de bom dia com o resumo"] },
+  { id: "emojis", t: "radio", l: "Ícones e emojis no app:", ops: ["Bastante", "Poucos", "Nenhum"] },
+  { id: "nome_app", t: "text", l: "Tem ideia de um nome para o app?", o: true },
+  { id: "frase", t: "text", l: "Uma palavra, frase ou símbolo que te representa.", o: true },
+  { id: "referencias", t: "text", l: "Algum app, site ou perfil com um visual que você ama?", o: true }
+]},
+{ id: "uso", title: "Como você vai usar", intro: "Para eu escolher a tecnologia certa.", qs: [
+  { id: "celular", t: "radio", l: "Seu celular é:", ops: ["iPhone", "Android"] },
+  { id: "computador", t: "radio", l: "Vai usar no computador também?", ops: ["Sim, bastante", "Às vezes", "Não"] },
+  { id: "pc_tribunal", t: "radio", l: "No computador do tribunal você consegue abrir sites pessoais?", o: true, ops: ["Sim", "Não", "Não sei"] },
+  { id: "notif", t: "radio", l: "Quanto de notificação você aguenta?", ops: ["Muitas, quero ser lembrada de tudo", "Só as importantes", "Poucas", "Nenhuma, eu abro o app"] },
+  { id: "silencio", t: "text", l: "Em que horário o app não deve te mandar nada?", o: true, h: "Exemplo: depois das 22h e durante as audiências." },
+  { id: "widget", t: "radio", l: "Gostaria de ver informações direto na tela inicial do celular (widget)?", ops: ["Sim", "Não", "Não sei o que é"] },
+  { id: "compartilhar", t: "radio", l: "Alguém mais vai usar ou ver alguma parte do app?", h: "Exemplo: dividir a lista de mercado.", ops: ["Não, só eu", "Sim"] },
+  { id: "compartilhar_quem", t: "text", l: "Quem e qual parte?", o: true, when: ["compartilhar", ["Sim"]] }
+]},
+{ id: "prioridades", title: "Prioridades", intro: "Última parte. Isso decide o que eu construo primeiro.", qs: [
+  { id: "top5", t: "check", l: "Escolha as 5 coisas mais importantes para você.", max: 5, ops: ["Agenda e prazos do tribunal", "Acompanhar os casos por etapas", "Agenda de pacientes particulares", "Financeiro dos atendimentos", "Tarefas pessoais", "Um calendário único com tudo", "Ciclo menstrual", "Remédios", "Consultas médicas e exames", "Alimentação", "Treino", "Água", "Hábitos", "Humor e bem-estar", "Finanças pessoais", "Lista de mercado"] },
+  { id: "comeco", t: "radio", l: "Você prefere:", ops: ["Começar simples e ir acrescentando", "Já ter tudo desde o início"] },
+  { id: "nao_quer", t: "area", l: "Tem algo que você não quer no app de jeito nenhum?", o: true },
+  { id: "faltou", t: "area", l: "Tem algo que eu não perguntei e você acha importante?", o: true },
+  { id: "recado", t: "area", l: "Quer deixar um recado?", o: true }
+]}
+];
+
+const LS = "ml-questionario-v1";
+let ans = {}, step = 0, sent = false, updatedAt = 0;
+let db = null, uid = null, isOwner = false, cloud = "none", writing = false, dirty = false, timer = null;
+const $ = (s) => document.querySelector(s);
+const main = $("#main");
+
+try { const d = JSON.parse(localStorage.getItem(LS) || "null"); if (d) { ans = d.ans || {}; step = d.step || 0; sent = !!d.sent; updatedAt = d.updatedAt || 0; } } catch (e) {}
+
+function visible(q) {
+  if (!q.when) return true;
+  const v = ans[q.when[0]];
+  if (Array.isArray(v)) return v.some(x => q.when[1].includes(x));
+  return q.when[1].includes(v);
+}
+function answered(q) {
+  const v = ans[q.id];
+  return Array.isArray(v) ? v.length > 0 : (v !== undefined && v !== null && String(v).trim() !== "");
+}
+function counts(sec) {
+  const vs = sec.qs.filter(visible);
+  return { done: vs.filter(answered).length, total: vs.length };
+}
+function totalProgress() {
+  let d = 0, t = 0; S.forEach(s => { const c = counts(s); d += c.done; t += c.total; }); return t ? d / t : 0;
+}
+const needsDetail = (opt) => opt === OUTRO || opt === "Alergia alimentar" || opt === "Sistema para psicólogos" || opt === "Sim, tenho um plano alimentar";
+
+function setSave(text, ok) { const el = $("#save"); el.textContent = text; el.classList.toggle("ok", !!ok); }
+
+function persist() {
+  updatedAt = Date.now();
+  try { localStorage.setItem(LS, JSON.stringify({ ans, step, sent, updatedAt })); } catch (e) {}
+  if (db && uid) { dirty = true; clearTimeout(timer); timer = setTimeout(flush, 1200); setSave("Salvando…"); }
+  else setSave("Salvo neste aparelho", true);
+}
+async function flush() {
+  if (!db || !uid || writing || !dirty) return;
+  writing = true; dirty = false;
+  try {
+    await db.doc("respostas/" + uid).set({ answers: ans, sent, step, updatedAt, progress: Math.round(totalProgress() * 100) });
+    setSave(sent ? "Enviado" : "Salvo na nuvem", true);
+  } catch (e) {
+    setSave("Salvo só neste aparelho");
+    cloud = "error";
+  }
+  writing = false;
+  if (dirty) flush();
+}
+
+function el(tag, attrs, ...kids) {
+  const n = document.createElement(tag);
+  for (const k in attrs || {}) {
+    if (k === "class") n.className = attrs[k];
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), attrs[k]);
+    else n.setAttribute(k, attrs[k]);
+  }
+  kids.flat().forEach(c => { if (c != null) n.append(c.nodeType ? c : document.createTextNode(c)); });
+  return n;
+}
+
+function renderQ(q) {
+  const card = el("div", { class: "card", id: "q-" + q.id });
+  card.append(el("p", { class: "q-label" }, q.l, q.o ? el("span", { class: "opt-tag" }, " (opcional)") : null));
+  if (q.h) card.append(el("p", { class: "q-help" }, q.h));
+  const v = ans[q.id];
+  const change = (val, rerender) => { if (val === undefined || (Array.isArray(val) && !val.length) || val === "") delete ans[q.id]; else ans[q.id] = val; persist(); if (rerender) render(); else updateBar(); };
+
+  if (q.t === "text" || q.t === "number" || q.t === "time") {
+    const inp = el("input", { type: q.t, id: "in-" + q.id, "aria-label": q.l });
+    if (q.t === "number") { inp.min = 14; inp.max = 99; inp.inputMode = "numeric"; }
+    inp.value = v || "";
+    inp.addEventListener("input", () => change(inp.value.trim() ? inp.value : ""));
+    card.append(inp);
+  } else if (q.t === "area") {
+    const ta = el("textarea", { id: "in-" + q.id, "aria-label": q.l });
+    ta.value = v || "";
+    ta.addEventListener("input", () => change(ta.value.trim() ? ta.value : ""));
+    card.append(ta);
+  } else if (q.t === "scale") {
+    const box = el("div", { class: "scale", role: "group", "aria-label": q.l });
+    for (let i = 1; i <= 5; i++) box.append(el("button", { type: "button", class: "chip", id: `in-${q.id}-${i}`, "aria-pressed": String(v === i), onclick: () => change(v === i ? undefined : i, true) }, String(i)));
+    card.append(box, el("div", { class: "scale-ends" }, el("span", {}, "1 = " + q.ends[0]), el("span", {}, "5 = " + q.ends[1])));
+  } else {
+    const multi = q.t !== "radio";
+    const cur = multi ? (Array.isArray(v) ? v : []) : v;
+    const box = el("div", { class: "chips", role: "group", "aria-label": q.l });
+    q.ops.forEach((op, i) => {
+      const [label, hex] = Array.isArray(op) ? op : [op, null];
+      const on = multi ? cur.includes(label) : cur === label;
+      const full = multi && q.max && !on && cur.length >= q.max;
+      const b = el("button", { type: "button", class: "chip", id: `in-${q.id}-${i}`, "aria-pressed": String(on), onclick: () => {
+        if (multi) change(on ? cur.filter(x => x !== label) : [...cur, label], true);
+        else change(on ? undefined : label, true);
+      } }, hex ? el("span", { class: "sw", style: "background:" + hex }) : null, label);
+      if (full) b.disabled = true;
+      box.append(b);
+    });
+    card.append(box);
+    if (q.max) card.append(el("p", { class: "q-help" }, `${cur ? (multi ? cur.length : 1) : 0} de ${q.max} escolhidas`));
+    const picked = multi ? cur : (cur ? [cur] : []);
+    const det = picked.filter(needsDetail);
+    if (q.t === "colors" || det.length || (q.id === "compartilhar_quem")) {
+      if (det.length || q.t === "colors") {
+        const key = q.id + "__detalhe";
+        const inp = el("input", { type: "text", id: "in-" + key, placeholder: q.t === "colors" ? "Outra cor ou combinação (opcional)" : "Qual? Conte aqui" });
+        inp.value = ans[key] || "";
+        inp.addEventListener("input", () => { if (inp.value.trim()) ans[key] = inp.value; else delete ans[key]; persist(); });
+        card.append(inp);
+      }
+    }
+  }
+  return card;
+}
+
+function updateBar() {
+  const p = step === 0 ? 0 : totalProgress();
+  $("#bar").style.width = Math.round(p * 100) + "%";
+}
+
+function welcome() {
+  return [
+    el("p", { class: "eyebrow" }, "Para a Maria Luísa"),
+    el("h1", {}, "Vamos desenhar o seu app juntos"),
+    el("p", { class: "lead" }, "O André está criando um aplicativo só seu, para juntar num lugar a agenda do tribunal, seus atendimentos, tarefas, ciclo, remédios, consultas, alimentação, treino e hábitos. Suas respostas decidem o que entra, o que fica de fora e como ele vai parecer."),
+    el("div", { class: "note" },
+      el("p", {}, el("strong", {}, "Leva de 20 a 30 minutos. "), "Não precisa fazer tudo de uma vez: suas respostas ficam salvas e você continua de onde parou."),
+      el("p", {}, el("strong", {}, "Tudo pode ser pulado. "), "As perguntas de saúde são opcionais. Responda só o que se sentir à vontade."),
+      el("p", {}, el("strong", {}, "Sigilo. "), "Não escreva nomes de partes, pacientes ou números de processo. Aqui só interessa como você trabalha, não os casos.")),
+    el("p", { class: "eyebrow" }, `${S.length} partes`),
+    el("ol", { class: "toc" }, S.map((s, i) => { const c = counts(s); return el("li", {}, el("button", { type: "button", id: "toc-" + s.id, onclick: () => go(i + 1) }, el("span", {}, `${i + 1}. ${s.title}`), el("span", { class: "n" + (c.done === c.total ? " done" : "") }, `${c.done}/${c.total}`))); }))
+  ];
+}
+
+function finalScreen() {
+  const nodes = [el("p", { class: "eyebrow" }, "Fim"), el("h1", {}, sent ? "Obrigado, Maria Luísa!" : "Quase lá")];
+  if (sent) nodes.push(el("p", { class: "lead" }, "Suas respostas foram enviadas. Se lembrar de mais alguma coisa, pode voltar em qualquer parte e mudar: tudo continua salvo."));
+  else nodes.push(el("p", { class: "lead" }, "Confira quanto você respondeu em cada parte. Toque numa parte para voltar a ela. Quando estiver pronta, toque em Enviar respostas."));
+  nodes.push(el("ol", { class: "toc" }, S.map((s, i) => { const c = counts(s); return el("li", {}, el("button", { type: "button", onclick: () => go(i + 1) }, el("span", {}, s.title), el("span", { class: "n" + (c.done === c.total ? " done" : "") }, `${c.done}/${c.total}`))); })));
+  if (cloud !== "ok") {
+    const pdfStatus = el("p", { class: "q-help", id: "pdfstatus" }, "");
+    nodes.push(el("div", { class: "note" },
+      el("p", {}, el("strong", {}, "Para enviar, faça os dois passos:")),
+      el("p", {}, "1. Toque em “Gerar PDF e enviar”, escolha o WhatsApp e a conversa com o André."),
+      el("p", {}, "2. Toque em “Enviar mensagem para o André”: o WhatsApp abre direto na conversa com ele, com as respostas já escritas. É só tocar em enviar.")));
+    nodes.push(el("div", { class: "copybox" },
+      el("button", { type: "button", class: "btn primary", id: "pdf", onclick: () => sharePdf(pdfStatus) }, "1. Gerar PDF e enviar"),
+      pdfStatus,
+      el("a", { class: "btn primary", id: "wa", href: "https://wa.me/" + WHATS + "?text=" + encodeURIComponent(asText()), target: "_blank", rel: "noopener", style: "text-align:center;text-decoration:none", onclick: () => { sent = true; persist(); } }, "2. Enviar mensagem para o André")));
+  }
+  const status = el("span", { class: "q-help", id: "copystatus" }, "");
+  nodes.push(el("div", { class: "copybox" }, el("button", { type: "button", class: "btn ghost", id: "copy", onclick: async () => {
+    try { await navigator.clipboard.writeText(asText()); status.textContent = "Copiado. Agora é só colar na conversa."; }
+    catch (e) { status.textContent = "O celular não deixou copiar. Selecione o texto abaixo e copie à mão."; const ta = el("textarea", { readonly: "", id: "copytext" }); ta.value = asText(); status.after(ta); }
+  } }, "Copiar respostas"), status));
+  return nodes;
+}
+
+const WHATS = "5592994373779";
+const latin = (t) => String(t).replace(/→/g, "->").replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/[–—]/g, "-").replace(/…/g, "...").replace(/[^\x00-\xFF]/g, "");
+
+function buildPdf() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const W = 210, M = 18, maxW = W - 2 * M, bottom = 280;
+  let y = 22;
+  const write = (text, size, style, color, gap) => {
+    doc.setFont("helvetica", style); doc.setFontSize(size); doc.setTextColor(...color);
+    const lines = doc.splitTextToSize(latin(text), maxW);
+    const lh = size * 0.42;
+    lines.forEach(line => { if (y + lh > bottom) { doc.addPage(); y = 20; } doc.text(line, M, y); y += lh; });
+    y += gap;
+  };
+  const nome = ans.nome || "Maria Luísa";
+  write("Questionário do app", 20, "bold", [61, 42, 86], 1);
+  write(nome + " · respondido em " + new Date().toLocaleDateString("pt-BR"), 11, "normal", [110, 100, 121], 6);
+  S.forEach((s, i) => {
+    if (y > bottom - 20) { doc.addPage(); y = 20; }
+    doc.setDrawColor(226, 221, 233); doc.line(M, y - 2, W - M, y - 2); y += 3;
+    write(`${i + 1}. ${s.title}`, 14, "bold", [107, 79, 143], 2);
+    s.qs.filter(visible).forEach(q => {
+      const v = ans[q.id];
+      let txt = answered(q) ? (Array.isArray(v) ? v.join("; ") : String(v)) : "(sem resposta)";
+      if (q.t === "scale" && answered(q)) txt = `${v} de 5  (1 = ${q.ends[0]}, 5 = ${q.ends[1]})`;
+      if (ans[q.id + "__detalhe"]) txt += " (" + ans[q.id + "__detalhe"] + ")";
+      write(q.l, 10.5, "bold", [43, 34, 54], 0.8);
+      write(txt, 10.5, "normal", answered(q) ? [43, 34, 54] : [160, 152, 170], 3);
+    });
+    y += 2;
+  });
+  return doc;
+}
+
+async function sharePdf(status) {
+  if (!window.jspdf) { status.textContent = "O gerador de PDF não carregou. Confira a internet e tente de novo, ou use o passo 2."; return; }
+  status.textContent = "Gerando o PDF…";
+  const doc = buildPdf();
+  const fname = "questionario-maria-luisa.pdf";
+  const file = new File([doc.output("blob")], fname, { type: "application/pdf" });
+  sent = true; persist();
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: "Questionário do app" });
+      status.textContent = "Pronto! Se escolheu o André, ele já recebeu.";
+      return;
+    }
+  } catch (e) {
+    if (e && e.name === "AbortError") { status.textContent = "Envio cancelado. Toque de novo quando quiser."; return; }
+  }
+  try { doc.save(fname); status.textContent = "O PDF foi salvo no aparelho (pasta Downloads/Arquivos). Envie esse arquivo para o André pelo WhatsApp e depois faça o passo 2."; }
+  catch (e) { status.textContent = "Este aparelho não deixou salvar o PDF. Use o passo 2."; }
+}
+
+function asText() {
+  const lines = ["QUESTIONÁRIO DO APP · MARIA LUÍSA", ""];
+  S.forEach(s => {
+    lines.push("== " + s.title.toUpperCase() + " ==");
+    s.qs.filter(visible).forEach(q => {
+      if (!answered(q)) return;
+      const v = ans[q.id];
+      let txt = Array.isArray(v) ? v.join("; ") : String(v);
+      if (ans[q.id + "__detalhe"]) txt += " (" + ans[q.id + "__detalhe"] + ")";
+      lines.push("• " + q.l + "\n  " + txt);
+    });
+    lines.push("");
+  });
+  return lines.join("\n");
+}
+
+function render() {
+  main.replaceChildren();
+  const last = S.length + 1;
+  if (step === 0) { main.append(...welcome()); $("#stepname").textContent = "Boas-vindas"; }
+  else if (step === last) { main.append(...finalScreen()); $("#stepname").textContent = "Revisão e envio"; }
+  else {
+    const s = S[step - 1];
+    $("#stepname").textContent = `Parte ${step} de ${S.length} · ${s.title}`;
+    main.append(el("p", { class: "eyebrow" }, `Parte ${step} de ${S.length}`), el("h2", {}, s.title), el("p", { class: "lead" }, s.intro));
+    if (isOwner && step === 1) main.append(el("div", { class: "note" }, el("p", {}, "André, você está vendo como dono. O que você marcar aqui fica salvo separado das respostas da Maria Luísa.")));
+    s.qs.filter(visible).forEach(q => main.append(renderQ(q)));
+  }
+  $("#prev").hidden = step === 0;
+  const nx = $("#next");
+  nx.textContent = step === 0 ? (Object.keys(ans).length ? "Continuar" : "Começar") : step === S.length ? "Revisar" : step === last ? (sent ? "Enviado" : "Enviar respostas") : "Próxima";
+  nx.disabled = step === last && sent;
+  nx.hidden = step === last && cloud !== "ok";
+  updateBar();
+}
+function go(n) { step = Math.max(0, Math.min(S.length + 1, n)); persist(); render(); window.scrollTo(0, 0); }
+$("#prev").addEventListener("click", () => go(step - 1));
+$("#next").addEventListener("click", () => {
+  if (step === S.length + 1) { sent = true; persist(); flush(); render(); return; }
+  go(step + 1);
+});
+
+render();
+setSave(Object.keys(ans).length ? "Salvo neste aparelho" : "Ainda nada salvo", Object.keys(ans).length > 0);
+
+(async () => {
+  try {
+    if (!window.claude || !window.claude.use) return;
+    const user = await claude.use("user");
+    isOwner = user ? !!user.isOwner() : false;
+    db = await claude.use("db");
+    if (!db || !user) { db = null; return; }
+    uid = await user.id();
+    const timeout = new Promise(r => setTimeout(() => r("timeout"), 10000));
+    const snap = await Promise.race([db.doc("respostas/" + uid).get(), timeout]);
+    if (snap === "timeout") { db = null; setSave("Salvo neste aparelho", true); return; }
+    const data = snap && (typeof snap.data === "function" ? snap.data() : snap.data !== undefined ? snap.data : snap);
+    if (data && data.answers && (data.updatedAt || 0) > updatedAt) {
+      ans = data.answers; sent = !!data.sent; updatedAt = data.updatedAt;
+      if (step === 0 && data.step) step = 0;
+    }
+    cloud = "ok";
+    if (Object.keys(ans).length) { dirty = true; flush(); } else setSave("Pronto para salvar na nuvem", true);
+    render();
+  } catch (e) { db = null; }
+})();
+</script>
+</body>
+</html>
