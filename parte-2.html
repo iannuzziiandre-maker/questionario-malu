@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Questionário 2 da Maria</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+/* Layout: uma coluna estreita, uma seção por tela, barra de progresso fixa no topo. */
+:root {
+  --bg: #f4f2f7;
+  --surface: #ffffff;
+  --ink: #2b2236;
+  --muted: #6d6479;
+  --line: #e2dde9;
+  --accent: #6b4f8f;
+  --accent-soft: #ece5f5;
+  --accent-ink: #ffffff;
+  --ok: #2f7d62;
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-body: "Nunito Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #19151f; --surface: #231e2b; --ink: #eee9f4; --muted: #a89fb5;
+    --line: #3a3245; --accent: #b79be0; --accent-soft: #33294a; --accent-ink: #1b1424; --ok: #6cc7a3;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #19151f; --surface: #231e2b; --ink: #eee9f4; --muted: #a89fb5;
+  --line: #3a3245; --accent: #b79be0; --accent-soft: #33294a; --accent-ink: #1b1424; --ok: #6cc7a3;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 17px; line-height: 1.5; }
+.top { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+.top-in { max-width: 680px; margin: 0 auto; padding: 10px 16px; display: grid; gap: 6px; }
+.top-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 14px; color: var(--muted); }
+.bar { height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+.save { font-size: 13px; }
+.save.ok { color: var(--ok); }
+main { max-width: 680px; margin: 0 auto; padding: 24px 16px 120px; display: grid; gap: 20px; }
+h1, h2 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; margin: 0; line-height: 1.2; }
+h1 { font-size: 32px; }
+h2 { font-size: 26px; }
+.eyebrow { font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+.lead { color: var(--muted); margin: 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 12px; }
+.q-label { font-weight: 700; margin: 0; }
+.q-help { color: var(--muted); font-size: 15px; margin: -6px 0 0; }
+.opt-tag { font-weight: 400; color: var(--muted); font-size: 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font: inherit; font-size: 15px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); padding: 8px 14px; border-radius: 99px; cursor: pointer; text-align: left; }
+.chip:hover { border-color: var(--accent); }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.chip:disabled { opacity: .45; cursor: not-allowed; }
+.chip .sw { display: inline-block; width: 14px; height: 14px; border-radius: 50%; vertical-align: -2px; margin-right: 6px; border: 1px solid rgba(0,0,0,.15); }
+.scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.scale .chip { text-align: center; padding: 10px 0; border-radius: 10px; font-variant-numeric: tabular-nums; }
+.scale-ends { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+input[type="text"], input[type="number"], input[type="time"], textarea {
+  font: inherit; width: 100%; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink);
+}
+textarea { min-height: 96px; resize: vertical; }
+input:focus, textarea:focus, .chip:focus-visible, .btn:focus-visible { outline: 3px solid var(--accent-soft); outline-offset: 1px; border-color: var(--accent); }
+.nav { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); }
+.nav-in { max-width: 680px; margin: 0 auto; padding: 12px 16px; display: flex; gap: 10px; justify-content: space-between; }
+.btn { font: inherit; font-weight: 700; border-radius: 10px; padding: 12px 20px; cursor: pointer; border: 1.5px solid var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn[hidden] { display: none; }
+.note { background: var(--accent-soft); border-radius: 12px; padding: 14px 16px; font-size: 15px; display: grid; gap: 6px; }
+.note p { margin: 0; }
+.toc { display: grid; gap: 6px; padding: 0; margin: 0; list-style: none; }
+.toc button { font: inherit; width: 100%; display: flex; justify-content: space-between; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; color: var(--ink); cursor: pointer; text-align: left; }
+.toc .n { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.toc .done { color: var(--ok); }
+.copybox { display: grid; gap: 8px; }
+@media (prefers-reduced-motion: reduce) { .bar > i { transition: none; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="top-row"><span id="stepname">Boas-vindas</span><span class="save" id="save">Ainda nada salvo</span></div>
+    <div class="bar" aria-hidden="true"><i id="bar"></i></div>
+  </div>
+</header>
+<main id="main"></main>
+<nav class="nav">
+  <div class="nav-in">
+    <button class="btn ghost" id="prev" type="button">Voltar</button>
+    <button class="btn primary" id="next" type="button">Começar</button>
+  </div>
+</nav>
+<script>
+const OUTRO = "Outro";
+const S = [
+{ id: "dinheiro", title: "Dinheiro", intro: "Você disse que a coisa nº 1 seria organizar as finanças. Então vamos caprichar.", qs: [
+  { id: "salario_dia", t: "text", l: "Em que dia(s) do mês você recebe o salário?", o: true, h: "Exemplo: dia 20 e adiantamento dia 5." },
+  { id: "cartoes", t: "radio", l: "Quantos cartões de crédito você usa?", ops: ["Nenhum", "1", "2", "3 ou mais"] },
+  { id: "registro_gasto", t: "radio", l: "Como você imagina anotar os gastos?", ops: ["Anotar cada gasto na hora (leva 5 segundos)", "Anotar só no fim do dia", "Só lançar a fatura do cartão no fim do mês", "Não sei, me ajuda a decidir"] },
+  { id: "impulso_onde", t: "check", l: "Onde você mais compra por impulso?", ops: ["Lojas online (Shopee, Amazon, Shein…)", "Instagram e TikTok", "Delivery de comida", "Lojas físicas e shopping", "Jogos (itens, passes)", OUTRO] },
+  { id: "impulso_ajuda", t: "check", l: "O que te ajudaria a segurar as compras por impulso?", ops: ["Lista de espera: anoto e espero 2 dias antes de comprar", "Aviso quando eu passar do limite do mês", "Ver quanto falta para o carro antes de comprar", "Ver quanto já economizei quando desisto de algo", "Um limite por categoria (roupas, delivery…)"] },
+  { id: "carro", t: "text", l: "O carro: mais ou menos quanto custa e até quando você quer comprar?", o: true, h: "Exemplo: R$ 50 mil, até dezembro de 2027." }
+]},
+{ id: "trabalho", title: "Casos do tribunal", intro: "Para o quadro de casos ficar do jeito certo.", qs: [
+  { id: "caso_extras", t: "check", l: "Além das etapas, o que seria útil em cada caso?", ops: ["Prazo para cada etapa, não só o final", "Lembrete das visitas e entrevistas", "Checklist do que falta (testes, contatos com a rede…)", "Campo de anotações", "Contagem para a meta de produtividade", "Só as etapas e o prazo estão ótimos"] },
+  { id: "meta_como", t: "text", l: "Como é medida a sua meta de produtividade?", o: true, h: "Exemplo: número de laudos entregues por mês." },
+  { id: "dia_pesado", t: "radio", l: "Você disse que quase sempre sai esgotada dos casos pesados. Quer um botão “dia pesado”?", h: "Ele deixa o app mais leve naquele dia: esconde o que não é urgente e sugere descanso ou um jogo.", ops: ["Sim, quero", "Talvez", "Não precisa"] }
+]},
+{ id: "saude2", title: "Saúde e rotina", intro: "Algumas perguntas rápidas.", qs: [
+  { id: "endo_quer", t: "check", l: "Sobre a endometriose, o que você quer acompanhar?", o: true, ops: ["Dias e intensidade da dor", "Onde dói", "Remédio que tomei para a dor", "Se a comida piorou ou melhorou", "Resumo para levar à ginecologista", "Prefiro não ter nada disso no app"] },
+  { id: "sono_ajuda", t: "radio", l: "Você deu nota 2 para o sono. Quer um lembrete de “hora de desligar”?", ops: ["Sim, às 23h", "Sim, em outro horário", "Não"] },
+  { id: "sono_hora", t: "time", l: "Qual horário?", o: true, when: ["sono_ajuda", ["Sim, em outro horário"]] },
+  { id: "receitas", t: "radio", l: "Quer que o app sugira receitas rápidas, sem lactose e sem glúten, para montar o cardápio?", ops: ["Sim", "Não, eu monto o meu"] },
+  { id: "receita_tempo", t: "radio", l: "Quanto tempo no máximo para preparar uma refeição?", ops: ["Até 15 minutos", "Até 30 minutos", "Até 45 minutos", "Tanto faz"], when: ["receitas", ["Sim"]] },
+  { id: "luta", t: "text", l: "Qual luta você treina?", o: true, h: "Exemplo: muay thai, jiu-jitsu, boxe." },
+  { id: "jogos_lista", t: "radio", l: "Quer colocar jogos na lista de filmes, séries e livros?", ops: ["Sim", "Não"] }
+]},
+{ id: "app", title: "O app em si", intro: "Últimas decisões.", qs: [
+  { id: "edicao", t: "check", l: "Você pediu “opção de edição”. O que quis dizer?", ops: ["Editar e apagar qualquer coisa que eu cadastrar", "Ligar e desligar partes do app", "Mudar a ordem do que aparece no Início", "Mudar cores e categorias", OUTRO] },
+  { id: "nome_final", t: "radio", l: "Qual nome fica?", ops: ["Eixo", "Fluxo", "Outro"] },
+  { id: "lembretes_canal", t: "check", l: "Por onde você quer receber os lembretes?", ops: ["Notificação no iPhone", "WhatsApp", "E-mail"] },
+  { id: "mesmos_dados", t: "radio", l: "Quer ver as mesmas informações no iPhone e no computador do tribunal?", h: "Para isso o app precisa de login (e-mail e senha).", ops: ["Sim, nos dois", "Só no celular está bom"] },
+  { id: "google", t: "radio", l: "Os compromissos do Google Agenda devem:", ops: ["Aparecer no app e o que eu criar no app ir para o Google", "Só aparecer no app", "Não precisa ligar com o Google"] },
+  { id: "extra", t: "area", l: "Mais alguma coisa?", o: true }
+]}
+];
+
+const LS = "ml-questionario-v2";
+let ans = {}, step = 0, sent = false, updatedAt = 0;
+let db = null, uid = null, isOwner = false, cloud = "none", writing = false, dirty = false, timer = null;
+const $ = (s) => document.querySelector(s);
+const main = $("#main");
+
+try { const d = JSON.parse(localStorage.getItem(LS) || "null"); if (d) { ans = d.ans || {}; step = d.step || 0; sent = !!d.sent; updatedAt = d.updatedAt || 0; } } catch (e) {}
+
+function visible(q) {
+  if (!q.when) return true;
+  const v = ans[q.when[0]];
+  if (Array.isArray(v)) return v.some(x => q.when[1].includes(x));
+  return q.when[1].includes(v);
+}
+function answered(q) {
+  const v = ans[q.id];
+  return Array.isArray(v) ? v.length > 0 : (v !== undefined && v !== null && String(v).trim() !== "");
+}
+function counts(sec) {
+  const vs = sec.qs.filter(visible);
+  return { done: vs.filter(answered).length, total: vs.length };
+}
+function totalProgress() {
+  let d = 0, t = 0; S.forEach(s => { const c = counts(s); d += c.done; t += c.total; }); return t ? d / t : 0;
+}
+const needsDetail = (opt) => opt === OUTRO || opt === "Alergia alimentar" || opt === "Sistema para psicólogos" || opt === "Sim, tenho um plano alimentar";
+
+function setSave(text, ok) { const el = $("#save"); el.textContent = text; el.classList.toggle("ok", !!ok); }
+
+function persist() {
+  updatedAt = Date.now();
+  try { localStorage.setItem(LS, JSON.stringify({ ans, step, sent, updatedAt })); } catch (e) {}
+  if (db && uid) { dirty = true; clearTimeout(timer); timer = setTimeout(flush, 1200); setSave("Salvando…"); }
+  else setSave("Salvo neste aparelho", true);
+}
+async function flush() {
+  if (!db || !uid || writing || !dirty) return;
+  writing = true; dirty = false;
+  try {
+    await db.doc("respostas/" + uid).set({ answers: ans, sent, step, updatedAt, progress: Math.round(totalProgress() * 100) });
+    setSave(sent ? "Enviado" : "Salvo na nuvem", true);
+  } catch (e) {
+    setSave("Salvo só neste aparelho");
+    cloud = "error";
+  }
+  writing = false;
+  if (dirty) flush();
+}
+
+function el(tag, attrs, ...kids) {
+  const n = document.createElement(tag);
+  for (const k in attrs || {}) {
+    if (k === "class") n.className = attrs[k];
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), attrs[k]);
+    else n.setAttribute(k, attrs[k]);
+  }
+  kids.flat().forEach(c => { if (c != null) n.append(c.nodeType ? c : document.createTextNode(c)); });
+  return n;
+}
+
+function renderQ(q) {
+  const card = el("div", { class: "card", id: "q-" + q.id });
+  card.append(el("p", { class: "q-label" }, q.l, q.o ? el("span", { class: "opt-tag" }, " (opcional)") : null));
+  if (q.h) card.append(el("p", { class: "q-help" }, q.h));
+  const v = ans[q.id];
+  const change = (val, rerender) => { if (val === undefined || (Array.isArray(val) && !val.length) || val === "") delete ans[q.id]; else ans[q.id] = val; persist(); if (rerender) render(); else updateBar(); };
+
+  if (q.t === "text" || q.t === "number" || q.t === "time") {
+    const inp = el("input", { type: q.t, id: "in-" + q.id, "aria-label": q.l });
+    if (q.t === "number") { inp.min = 14; inp.max = 99; inp.inputMode = "numeric"; }
+    inp.value = v || "";
+    inp.addEventListener("input", () => change(inp.value.trim() ? inp.value : ""));
+    card.append(inp);
+  } else if (q.t === "area") {
+    const ta = el("textarea", { id: "in-" + q.id, "aria-label": q.l });
+    ta.value = v || "";
+    ta.addEventListener("input", () => change(ta.value.trim() ? ta.value : ""));
+    card.append(ta);
+  } else if (q.t === "scale") {
+    const box = el("div", { class: "scale", role: "group", "aria-label": q.l });
+    for (let i = 1; i <= 5; i++) box.append(el("button", { type: "button", class: "chip", id: `in-${q.id}-${i}`, "aria-pressed": String(v === i), onclick: () => change(v === i ? undefined : i, true) }, String(i)));
+    card.append(box, el("div", { class: "scale-ends" }, el("span", {}, "1 = " + q.ends[0]), el("span", {}, "5 = " + q.ends[1])));
+  } else {
+    const multi = q.t !== "radio";
+    const cur = multi ? (Array.isArray(v) ? v : []) : v;
+    const box = el("div", { class: "chips", role: "group", "aria-label": q.l });
+    q.ops.forEach((op, i) => {
+      const [label, hex] = Array.isArray(op) ? op : [op, null];
+      const on = multi ? cur.includes(label) : cur === label;
+      const full = multi && q.max && !on && cur.length >= q.max;
+      const b = el("button", { type: "button", class: "chip", id: `in-${q.id}-${i}`, "aria-pressed": String(on), onclick: () => {
+        if (multi) change(on ? cur.filter(x => x !== label) : [...cur, label], true);
+        else change(on ? undefined : label, true);
+      } }, hex ? el("span", { class: "sw", style: "background:" + hex }) : null, label);
+      if (full) b.disabled = true;
+      box.append(b);
+    });
+    card.append(box);
+    if (q.max) card.append(el("p", { class: "q-help" }, `${cur ? (multi ? cur.length : 1) : 0} de ${q.max} escolhidas`));
+    const picked = multi ? cur : (cur ? [cur] : []);
+    const det = picked.filter(needsDetail);
+    if (q.t === "colors" || det.length || (q.id === "compartilhar_quem")) {
+      if (det.length || q.t === "colors") {
+        const key = q.id + "__detalhe";
+        const inp = el("input", { type: "text", id: "in-" + key, placeholder: q.t === "colors" ? "Outra cor ou combinação (opcional)" : "Qual? Conte aqui" });
+        inp.value = ans[key] || "";
+        inp.addEventListener("input", () => { if (inp.value.trim()) ans[key] = inp.value; else delete ans[key]; persist(); });
+        card.append(inp);
+      }
+    }
+  }
+  return card;
+}
+
+function updateBar() {
+  const p = step === 0 ? 0 : totalProgress();
+  $("#bar").style.width = Math.round(p * 100) + "%";
+}
+
+function welcome() {
+  return [
+    el("p", { class: "eyebrow" }, "Para a Maria Luísa"),
+    el("h1", {}, "Parte 2: só mais umas dúvidas"),
+    el("p", { class: "lead" }, "Obrigado pelas respostas! O app já está tomando forma: verde-sálvia, lilás e azul-marinho, com casos por etapas, finanças, cardápio e lista de mercado. Ficaram algumas dúvidas para ele sair do seu jeito."),
+    el("div", { class: "note" },
+      el("p", {}, el("strong", {}, "Leva uns 5 minutos. "), "Se fechar, é só abrir de novo no mesmo celular que continua de onde parou."),
+      el("p", {}, el("strong", {}, "Tudo pode ser pulado. "), "Responda só o que se sentir à vontade."),
+      el("p", {}, el("strong", {}, "Sigilo. "), "Não escreva nomes de partes, pacientes ou números de processo. Aqui só interessa como você trabalha, não os casos.")),
+    el("p", { class: "eyebrow" }, `${S.length} partes`),
+    el("ol", { class: "toc" }, S.map((s, i) => { const c = counts(s); return el("li", {}, el("button", { type: "button", id: "toc-" + s.id, onclick: () => go(i + 1) }, el("span", {}, `${i + 1}. ${s.title}`), el("span", { class: "n" + (c.done === c.total ? " done" : "") }, `${c.done}/${c.total}`))); }))
+  ];
+}
+
+function finalScreen() {
+  const nodes = [el("p", { class: "eyebrow" }, "Fim"), el("h1", {}, sent ? "Obrigado, Maria!" : "Quase lá")];
+  if (sent) nodes.push(el("p", { class: "lead" }, "Suas respostas foram enviadas. Se lembrar de mais alguma coisa, pode voltar em qualquer parte e mudar: tudo continua salvo."));
+  else nodes.push(el("p", { class: "lead" }, "Confira quanto você respondeu em cada parte. Toque numa parte para voltar a ela. Quando estiver pronta, toque em Enviar respostas."));
+  nodes.push(el("ol", { class: "toc" }, S.map((s, i) => { const c = counts(s); return el("li", {}, el("button", { type: "button", onclick: () => go(i + 1) }, el("span", {}, s.title), el("span", { class: "n" + (c.done === c.total ? " done" : "") }, `${c.done}/${c.total}`))); })));
+  if (cloud !== "ok") {
+    const pdfStatus = el("p", { class: "q-help", id: "pdfstatus" }, "");
+    nodes.push(el("div", { class: "note" },
+      el("p", {}, el("strong", {}, "Para enviar, faça os dois passos:")),
+      el("p", {}, "1. Toque em “Gerar PDF e enviar”, escolha o WhatsApp e a conversa com o André."),
+      el("p", {}, "2. Toque em “Enviar mensagem para o André”: o WhatsApp abre direto na conversa com ele, com as respostas já escritas. É só tocar em enviar.")));
+    nodes.push(el("div", { class: "copybox" },
+      el("button", { type: "button", class: "btn primary", id: "pdf", onclick: () => sharePdf(pdfStatus) }, "1. Gerar PDF e enviar"),
+      pdfStatus,
+      el("a", { class: "btn primary", id: "wa", href: "https://wa.me/" + WHATS + "?text=" + encodeURIComponent(asText()), target: "_blank", rel: "noopener", style: "text-align:center;text-decoration:none", onclick: () => { sent = true; persist(); } }, "2. Enviar mensagem para o André")));
+  }
+  const status = el("span", { class: "q-help", id: "copystatus" }, "");
+  nodes.push(el("div", { class: "copybox" }, el("button", { type: "button", class: "btn ghost", id: "copy", onclick: async () => {
+    try { await navigator.clipboard.writeText(asText()); status.textContent = "Copiado. Agora é só colar na conversa."; }
+    catch (e) { status.textContent = "O celular não deixou copiar. Selecione o texto abaixo e copie à mão."; const ta = el("textarea", { readonly: "", id: "copytext" }); ta.value = asText(); status.after(ta); }
+  } }, "Copiar respostas"), status));
+  return nodes;
+}
+
+const WHATS = "5592994373779";
+const latin = (t) => String(t).replace(/→/g, "->").replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/[–—]/g, "-").replace(/…/g, "...").replace(/[^\x00-\xFF]/g, "");
+
+function buildPdf() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const W = 210, M = 18, maxW = W - 2 * M, bottom = 280;
+  let y = 22;
+  const write = (text, size, style, color, gap) => {
+    doc.setFont("helvetica", style); doc.setFontSize(size); doc.setTextColor(...color);
+    const lines = doc.splitTextToSize(latin(text), maxW);
+    const lh = size * 0.42;
+    lines.forEach(line => { if (y + lh > bottom) { doc.addPage(); y = 20; } doc.text(line, M, y); y += lh; });
+    y += gap;
+  };
+  const nome = ans.nome || "Maria";
+  write("Questionário do app · parte 2", 20, "bold", [61, 42, 86], 1);
+  write(nome + " · respondido em " + new Date().toLocaleDateString("pt-BR"), 11, "normal", [110, 100, 121], 6);
+  S.forEach((s, i) => {
+    if (y > bottom - 20) { doc.addPage(); y = 20; }
+    doc.setDrawColor(226, 221, 233); doc.line(M, y - 2, W - M, y - 2); y += 3;
+    write(`${i + 1}. ${s.title}`, 14, "bold", [107, 79, 143], 2);
+    s.qs.filter(visible).forEach(q => {
+      const v = ans[q.id];
+      let txt = answered(q) ? (Array.isArray(v) ? v.join("; ") : String(v)) : "(sem resposta)";
+      if (q.t === "scale" && answered(q)) txt = `${v} de 5  (1 = ${q.ends[0]}, 5 = ${q.ends[1]})`;
+      if (ans[q.id + "__detalhe"]) txt += " (" + ans[q.id + "__detalhe"] + ")";
+      write(q.l, 10.5, "bold", [43, 34, 54], 0.8);
+      write(txt, 10.5, "normal", answered(q) ? [43, 34, 54] : [160, 152, 170], 3);
+    });
+    y += 2;
+  });
+  return doc;
+}
+
+async function sharePdf(status) {
+  if (!window.jspdf) { status.textContent = "O gerador de PDF não carregou. Confira a internet e tente de novo, ou use o passo 2."; return; }
+  status.textContent = "Gerando o PDF…";
+  const doc = buildPdf();
+  const fname = "questionario-2-maria.pdf";
+  const file = new File([doc.output("blob")], fname, { type: "application/pdf" });
+  sent = true; persist();
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: "Questionário do app" });
+      status.textContent = "Pronto! Se escolheu o André, ele já recebeu.";
+      return;
+    }
+  } catch (e) {
+    if (e && e.name === "AbortError") { status.textContent = "Envio cancelado. Toque de novo quando quiser."; return; }
+  }
+  try { doc.save(fname); status.textContent = "O PDF foi salvo no aparelho (pasta Downloads/Arquivos). Envie esse arquivo para o André pelo WhatsApp e depois faça o passo 2."; }
+  catch (e) { status.textContent = "Este aparelho não deixou salvar o PDF. Use o passo 2."; }
+}
+
+function asText() {
+  const lines = ["QUESTIONÁRIO DO APP · PARTE 2 · MARIA", ""];
+  S.forEach(s => {
+    lines.push("== " + s.title.toUpperCase() + " ==");
+    s.qs.filter(visible).forEach(q => {
+      if (!answered(q)) return;
+      const v = ans[q.id];
+      let txt = Array.isArray(v) ? v.join("; ") : String(v);
+      if (ans[q.id + "__detalhe"]) txt += " (" + ans[q.id + "__detalhe"] + ")";
+      lines.push("• " + q.l + "\n  " + txt);
+    });
+    lines.push("");
+  });
+  return lines.join("\n");
+}
+
+function render() {
+  main.replaceChildren();
+  const last = S.length + 1;
+  if (step === 0) { main.append(...welcome()); $("#stepname").textContent = "Boas-vindas"; }
+  else if (step === last) { main.append(...finalScreen()); $("#stepname").textContent = "Revisão e envio"; }
+  else {
+    const s = S[step - 1];
+    $("#stepname").textContent = `Parte ${step} de ${S.length} · ${s.title}`;
+    main.append(el("p", { class: "eyebrow" }, `Parte ${step} de ${S.length}`), el("h2", {}, s.title), el("p", { class: "lead" }, s.intro));
+    if (isOwner && step === 1) main.append(el("div", { class: "note" }, el("p", {}, "André, você está vendo como dono. O que você marcar aqui fica salvo separado das respostas da Maria Luísa.")));
+    s.qs.filter(visible).forEach(q => main.append(renderQ(q)));
+  }
+  $("#prev").hidden = step === 0;
+  const nx = $("#next");
+  nx.textContent = step === 0 ? (Object.keys(ans).length ? "Continuar" : "Começar") : step === S.length ? "Revisar" : step === last ? (sent ? "Enviado" : "Enviar respostas") : "Próxima";
+  nx.disabled = step === last && sent;
+  nx.hidden = step === last && cloud !== "ok";
+  updateBar();
+}
+function go(n) { step = Math.max(0, Math.min(S.length + 1, n)); persist(); render(); window.scrollTo(0, 0); }
+$("#prev").addEventListener("click", () => go(step - 1));
+$("#next").addEventListener("click", () => {
+  if (step === S.length + 1) { sent = true; persist(); flush(); render(); return; }
+  go(step + 1);
+});
+
+render();
+setSave(Object.keys(ans).length ? "Salvo neste aparelho" : "Ainda nada salvo", Object.keys(ans).length > 0);
+
+(async () => {
+  try {
+    if (!window.claude || !window.claude.use) return;
+    const user = await claude.use("user");
+    isOwner = user ? !!user.isOwner() : false;
+    db = await claude.use("db");
+    if (!db || !user) { db = null; return; }
+    uid = await user.id();
+    const timeout = new Promise(r => setTimeout(() => r("timeout"), 10000));
+    const snap = await Promise.race([db.doc("respostas/" + uid).get(), timeout]);
+    if (snap === "timeout") { db = null; setSave("Salvo neste aparelho", true); return; }
+    const data = snap && (typeof snap.data === "function" ? snap.data() : snap.data !== undefined ? snap.data : snap);
+    if (data && data.answers && (data.updatedAt || 0) > updatedAt) {
+      ans = data.answers; sent = !!data.sent; updatedAt = data.updatedAt;
+      if (step === 0 && data.step) step = 0;
+    }
+    cloud = "ok";
+    if (Object.keys(ans).length) { dirty = true; flush(); } else setSave("Pronto para salvar na nuvem", true);
+    render();
+  } catch (e) { db = null; }
+})();
+</script>
+</body>
+</html>
