@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Fluxo">
+<meta name="theme-color" content="#f5f4f8">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<title>Fluxo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Fluxo: uma coluna estreita, cartões espaçados, barra de abas fixa embaixo (celular primeiro). */
+:root {
+  --bg: #f5f4f8;
+  --surface: #ffffff;
+  --navy: #24365c;
+  --ink: #24365c;
+  --muted: #6f7790;
+  --line: #e3e1ec;
+  --sage: #8fa98a;
+  --sage-soft: #e6eee4;
+  --lilac: #9b82c9;
+  --lilac-soft: #eee8f8;
+  --rose: #c98b95;
+  --sand: #d8b46a;
+  --danger: #b5485a;
+  --font: "Nunito", "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 16px; line-height: 1.45; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.app { max-width: 560px; margin: 0 auto; padding: 18px 16px 110px; display: grid; gap: 16px; }
+header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 20px; letter-spacing: .02em; }
+.brand svg { width: 30px; height: 30px; }
+h1 { font-size: 26px; font-weight: 800; margin: 0; text-wrap: balance; line-height: 1.2; }
+h2 { font-size: 18px; font-weight: 800; margin: 0; }
+.sub { color: var(--muted); margin: 0; }
+.quote { font-style: italic; color: var(--muted); font-size: 14px; margin: 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: grid; gap: 10px; }
+.card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.link { justify-self: start; background: none; border: 0; color: var(--lilac); font-weight: 700; cursor: pointer; padding: 4px 0; }
+.btn { border: 0; background: var(--navy); color: #fff; font-weight: 700; border-radius: 12px; padding: 10px 16px; cursor: pointer; }
+.btn.soft { background: var(--lilac-soft); color: var(--navy); }
+.btn.sage { background: var(--sage-soft); color: var(--navy); }
+.btn.danger { background: #f6e3e6; color: var(--danger); }
+.row { display: flex; align-items: center; gap: 10px; }
+.list { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.item { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.item:last-child { border-bottom: 0; }
+.item .grow { flex: 1; min-width: 0; }
+.item .meta { color: var(--muted); font-size: 13px; }
+.item.done .t { text-decoration: line-through; color: var(--muted); }
+.check { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--sage); background: transparent; cursor: pointer; flex: none; display: grid; place-items: center; padding: 0; }
+.check[aria-pressed="true"] { background: var(--sage); }
+.check[aria-pressed="true"]::after { content: ""; width: 9px; height: 5px; border: 2px solid #fff; border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px, -1px); }
+.edit { background: none; border: 0; color: var(--muted); cursor: pointer; padding: 4px 6px; border-radius: 8px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.pill { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 99px; background: var(--lilac-soft); color: var(--navy); white-space: nowrap; }
+.pill.warn { background: #f8eccd; color: #7a5a12; }
+.pill.late { background: #f6e3e6; color: var(--danger); }
+.pill.ok { background: var(--sage-soft); color: #3d5a39; }
+.tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 14px; display: grid; gap: 4px; text-align: left; cursor: pointer; }
+.tile .k { font-size: 13px; color: var(--muted); font-weight: 700; }
+.tile .v { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.bar { height: 10px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--sage); border-radius: 99px; }
+.water { display: flex; gap: 6px; flex-wrap: wrap; }
+.cup { width: 30px; height: 36px; border-radius: 6px 6px 10px 10px; border: 2px solid var(--lilac); background: transparent; cursor: pointer; padding: 0; }
+.cup[aria-pressed="true"] { background: var(--lilac); }
+.tabs { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
+.tabs-in { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); }
+.tab { background: none; border: 0; padding: 10px 0 12px; display: grid; justify-items: center; gap: 3px; font-size: 12px; font-weight: 700; color: var(--muted); cursor: pointer; }
+.tab svg { width: 22px; height: 22px; }
+.tab[aria-current="page"] { color: var(--navy); }
+.tab[aria-current="page"] svg { color: var(--lilac); }
+.seg { display: flex; gap: 6px; flex-wrap: wrap; }
+.seg button { border: 1.5px solid var(--line); background: var(--surface); border-radius: 99px; padding: 6px 12px; cursor: pointer; font-size: 14px; font-weight: 600; }
+.seg button[aria-pressed="true"] { background: var(--navy); color: #fff; border-color: var(--navy); }
+.month { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.month .wd { font-size: 12px; color: var(--muted); text-align: center; font-weight: 700; }
+.day { aspect-ratio: 1; border: 0; border-radius: 12px; background: transparent; cursor: pointer; display: grid; align-content: center; justify-items: center; gap: 3px; font-variant-numeric: tabular-nums; font-weight: 600; padding: 0; }
+.day.out { color: #c3c1cf; }
+.day.today { background: var(--lilac-soft); }
+.day[aria-pressed="true"] { background: var(--navy); color: #fff; }
+.day .dots { display: flex; gap: 2px; height: 6px; }
+.day .dots i { width: 5px; height: 5px; border-radius: 50%; }
+.steps { display: flex; gap: 3px; }
+.steps i { flex: 1; height: 6px; border-radius: 99px; background: var(--line); }
+.steps i.on { background: var(--lilac); }
+.menu { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.menu button { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px; text-align: left; cursor: pointer; display: grid; gap: 4px; }
+.menu b { font-size: 16px; }
+.menu span { font-size: 13px; color: var(--muted); }
+.sheet-back { position: fixed; inset: 0; background: rgba(36,54,92,.35); display: grid; align-items: end; z-index: 20; }
+.sheet { background: var(--surface); width: 100%; max-width: 560px; margin: 0 auto; border-radius: 22px 22px 0 0; padding: 20px 16px calc(20px + env(safe-area-inset-bottom)); display: grid; gap: 12px; max-height: 90vh; overflow: auto; }
+.field { display: grid; gap: 4px; }
+.field label { font-size: 14px; font-weight: 700; color: var(--muted); }
+.field input, .field select, .field textarea { width: 100%; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--bg); }
+.field textarea { min-height: 80px; }
+.switch { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.switch input { width: 22px; height: 22px; accent-color: var(--navy); }
+.menu-grid td, .menu-grid th { padding: 6px 4px; text-align: left; vertical-align: top; font-size: 14px; }
+.menu-grid { width: 100%; border-collapse: collapse; }
+.menu-grid tr + tr td { border-top: 1px solid var(--line); }
+.menu-grid input { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; background: var(--bg); font-size: 14px; }
+.scroll-x { overflow-x: auto; }
+.demo { font-size: 13px; background: var(--sage-soft); color: #3d5a39; border-radius: 12px; padding: 8px 12px; }
+.empty { color: var(--muted); font-size: 14px; margin: 0; }
+:focus-visible { outline: 3px solid var(--lilac); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<nav class="tabs" aria-label="Seções"><div class="tabs-in" id="tabs"></div></nav>
+<div id="sheet"></div>
+<script>
+/* ---------- utilidades ---------- */
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const uid = () => Math.random().toString(36).slice(2, 9);
+const pad = (n) => String(n).padStart(2, "0");
+const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const TODAY = () => iso(new Date());
+const addDays = (s, n) => { const d = new Date(s + "T12:00"); d.setDate(d.getDate() + n); return iso(d); };
+const diffDays = (a, b) => Math.round((new Date(a + "T12:00") - new Date(b + "T12:00")) / 864e5);
+const brl = (v) => (Number(v) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const fmtDate = (s) => { const d = new Date(s + "T12:00"); return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }).replace(".", ""); };
+const MES = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+const SEMANA = ["seg","ter","qua","qui","sex","sáb","dom"];
+const ym = (s) => s.slice(0, 7);
+
+const CATS = {
+  Tribunal: "#24365c", Pessoal: "#9b82c9", Estudos: "#8fa98a", Saúde: "#c98b95", Treino: "#5f8fa8", Contas: "#d8b46a"
+};
+const ETAPAS = ["Leitura dos autos", "Entrevistas", "Visita domiciliar", "Rede (escola, CRAS, CREAS, CT)", "Testes", "Escrita e revisão", "Entregue"];
+const MODULOS = {
+  casos: "Casos do tribunal", agenda: "Agenda", tarefas: "Tarefas", financas: "Finanças", alimentacao: "Cardápio da semana",
+  mercado: "Lista de mercado", treino: "Treino", habitos: "Hábitos e água", estudos: "Estudos", endo: "Diário de dor", lazer: "Filmes, séries, livros e jogos", pets: "Pets"
+};
+
+/* ---------- dados (exemplos marcados) ---------- */
+const KEY = "fluxo-v2";
+function seed() {
+  return {
+    demo: false, setup: false,
+    nome: "",
+    cfg: { frase: "", pets: [], treino: "", salario: "", meta: "Carro" },
+    metaLaudos: 4,
+    modulos: Object.fromEntries(Object.keys(MODULOS).map(k => [k, true])),
+    silencio: "",
+    eventos: [], casos: [], tarefas: [],
+    fin: {
+      orcamento: 3000,
+      cartoes: ["Cartão 1", "Cartão 2", "Cartão 3"],
+      limites: { "Compras": 400, "Roupas": 250, "Comida fora": 250, "Jogos": 100 },
+      economia: 0, gastos: [], contas: [],
+      carro: { alvo: 0, guardado: 0, prazo: "" },
+      espera: []
+    },
+    cardapio: Object.fromEntries(SEMANA.map((d, i) => [d, {
+      cafe: ["Tapioca com ovo", "Cuscuz com ovo", "Frutas e pão sem glúten", "Tapioca com frango", "Crepioca", "Panqueca de banana", "Livre"][i],
+      almoco: ["Frango, arroz e salada", "Peixe, purê de macaxeira", "Carne moída, arroz, feijão", "Frango, batata-doce", "Peixe assado, salada", "Livre", "Livre"][i],
+      jantar: ["Omelete e salada", "Sopa de legumes", "Wrap de tapioca", "Omelete", "Caldo de frango", "Livre", "Livre"][i]
+    }])),
+    mercado: [], agua: {}, metaAgua: 7,
+    habitos: ["Ler 10 páginas", "Estudar 30 minutos", "Alongar", "Celular longe depois das 23h"].map(nome => ({ id: uid(), nome, dias: {} })),
+    treinos: {}, estudos: [], endo: [], lazer: [], pets: [], pesado: {}
+  };
+}
+/* ---------- login e nuvem (Firebase) ----------
+   Cole aqui o bloco firebaseConfig do console do Firebase. Ele é público (não é senha).
+   Com null, o app funciona sem login e guarda tudo só no aparelho. */
+const FIREBASE = {
+  apiKey: "AIzaSyDTXb6FnSc8N4ZzpKQpuvLavXtakXZkf98",
+  authDomain: "fluxo-app-a4327.firebaseapp.com",
+  projectId: "fluxo-app-a4327",
+  storageBucket: "fluxo-app-a4327.firebasestorage.app",
+  messagingSenderId: "428490126011",
+  appId: "1:428490126011:web:0714fd05ec5bb8cebb6f9e"
+};
+const FB_VER = "10.12.2";
+let fb = null, user = null, authReady = !FIREBASE, nuvem = "", cloudTimer = null, cloudBusy = false, cloudDirty = false;
+
+let D;
+try { D = JSON.parse(localStorage.getItem(KEY)) || seed(); } catch (e) { D = seed(); }
+function normalize() {
+  D.cfg = Object.assign({ frase: "", pets: [], treino: "", salario: "", meta: "Carro" }, D.cfg || {});
+  D.pesado = D.pesado || {}; D.pets = D.pets || [];
+  D.modulos = Object.assign(Object.fromEntries(Object.keys(MODULOS).map(k => [k, true])), D.modulos || {});
+}
+normalize();
+const save = () => {
+  try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) {}
+  if (fb && user) { cloudDirty = true; clearTimeout(cloudTimer); cloudTimer = setTimeout(pushCloud, 1200); }
+};
+async function pushCloud() {
+  if (!fb || !user || cloudBusy || !cloudDirty) return;
+  cloudBusy = true; cloudDirty = false;
+  try { await fb.setDoc(fb.doc(fb.db, "usuarios", user.uid, "dados", "app"), { json: JSON.stringify(D), atualizado: Date.now() }); nuvem = "ok"; }
+  catch (e) { nuvem = "erro"; cloudDirty = true; }
+  cloudBusy = false;
+  if (cloudDirty) cloudTimer = setTimeout(pushCloud, 5000);
+}
+async function initFirebase() {
+  try {
+    const base = `https://www.gstatic.com/firebasejs/${FB_VER}/`;
+    const [app, auth, fs] = await Promise.all([import(base + "firebase-app.js"), import(base + "firebase-auth.js"), import(base + "firebase-firestore.js")]);
+    const a = app.initializeApp(FIREBASE);
+    const au = auth.getAuth(a);
+    try { await auth.setPersistence(au, auth.browserLocalPersistence); } catch (e) {}
+    fb = { auth: au, db: fs.getFirestore(a), A: auth, doc: fs.doc, getDoc: fs.getDoc, setDoc: fs.setDoc };
+    auth.onAuthStateChanged(au, async (u) => {
+      user = u;
+      if (u) {
+        try {
+          const snap = await fb.getDoc(fb.doc(fb.db, "usuarios", u.uid, "dados", "app"));
+          if (snap.exists()) { D = JSON.parse(snap.data().json); }
+          else if (D.owner && D.owner !== u.uid) { D = seed(); }
+          D.owner = u.uid; normalize();
+          try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) {}
+          if (!snap.exists()) { cloudDirty = true; pushCloud(); }
+          nuvem = "ok";
+        } catch (e) { nuvem = "erro"; }
+      }
+      authReady = true; render();
+    });
+  } catch (e) { authReady = true; loginErro = "Não consegui conectar. Confira a internet e abra o app de novo."; render(); }
+}
+let loginModo = "entrar", loginErro = "", loginMsg = "";
+const ERROS = {
+  "auth/invalid-email": "Esse e-mail não parece certo.",
+  "auth/invalid-credential": "E-mail ou senha errados.",
+  "auth/wrong-password": "Senha errada.",
+  "auth/user-not-found": "Não achei conta com esse e-mail. Toque em “Criar conta”.",
+  "auth/email-already-in-use": "Já existe conta com esse e-mail. Toque em “Entrar”.",
+  "auth/weak-password": "A senha precisa ter pelo menos 6 caracteres.",
+  "auth/too-many-requests": "Muitas tentativas. Espere uns minutos e tente de novo.",
+  "auth/network-request-failed": "Sem internet. Confira a conexão e tente de novo."
+};
+function vLogin() {
+  if (!authReady) return `<header class="top"><div class="brand">${TREE}Fluxo</div></header><p class="sub">Abrindo…</p>`;
+  const criar = loginModo === "criar";
+  return `<header class="top"><div class="brand">${TREE}Fluxo</div></header>
+  <div><h1>${criar ? "Criar sua conta" : "Que bom te ver!"}</h1><p class="sub">${criar ? "Use seu e-mail e escolha uma senha (mínimo 6 caracteres)." : "Entre com seu e-mail e senha."}</p></div>
+  <form class="card" id="login-form">
+    <div class="field"><label for="l-email">E-mail</label><input id="l-email" type="email" autocomplete="email" required></div>
+    <div class="field"><label for="l-senha">Senha</label><input id="l-senha" type="password" autocomplete="${criar ? "new-password" : "current-password"}" minlength="6" required></div>
+    ${loginErro ? `<p class="pill late" style="white-space:normal">${esc(loginErro)}</p>` : ""}
+    ${loginMsg ? `<p class="pill ok" style="white-space:normal">${esc(loginMsg)}</p>` : ""}
+    <button class="btn" type="submit" id="l-ok">${criar ? "Criar conta" : "Entrar"}</button>
+  </form>
+  <div class="row" style="justify-content:space-between;flex-wrap:wrap">
+    <button class="link" id="l-modo">${criar ? "Já tenho conta" : "Criar conta"}</button>
+    ${criar ? "" : '<button class="link" id="l-esqueci">Esqueci a senha</button>'}
+  </div>`;
+}
+
+/* ---------- navegação ---------- */
+let view = "inicio", agendaDia = TODAY(), agendaMes = TODAY().slice(0, 7);
+const TABS = [
+  ["inicio", "Início", '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>'],
+  ["agenda", "Agenda", '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>'],
+  ["casos", "Casos", '<path d="M4 7h16v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/>'],
+  ["financas", "Dinheiro", '<circle cx="12" cy="12" r="9"/><path d="M15 9.5c-.5-1-1.6-1.5-3-1.5-1.7 0-3 .8-3 2s1.3 1.7 3 2 3 .8 3 2-1.3 2-3 2c-1.4 0-2.5-.5-3-1.5M12 6v2M12 16v2"/>'],
+  ["mais", "Mais", '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>']
+];
+function go(v) { view = v; render(); window.scrollTo(0, 0); }
+function renderTabs() {
+  $(".tabs").style.display = D.setup ? "" : "none";
+  const main = ["inicio", "agenda", "casos", "financas"];
+  const active = main.includes(view) ? view : "mais";
+  $("#tabs").innerHTML = TABS.filter(([k]) => k === "inicio" || k === "mais" || D.modulos[k]).map(([k, l, p]) =>
+    `<button class="tab" id="tab-${k}" data-go="${k}" ${active === k ? 'aria-current="page"' : ""}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>${l}</button>`).join("");
+  $("#tabs").style.gridTemplateColumns = `repeat(${$("#tabs").children.length}, 1fr)`;
+}
+
+const TREE = `<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="11" r="8" fill="#8fa98a"/><circle cx="11" cy="9" r="4.5" fill="#9b82c9" opacity=".85"/><path d="M16 12v10M16 22c-2 2-5 3-8 3M16 22c2 2 5 3 8 3M16 22v6M16 25c-1.5 1.2-3 2-5 2.5M16 25c1.5 1.2 3 2 5 2.5" stroke="#24365c" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`;
+
+/* ---------- formulário genérico (criar e editar) ---------- */
+const fid = (k) => "f-" + String(k).replace(/[^a-z0-9_]/gi, "_");
+function form(title, fields, values, onSave, onDelete) {
+  const v = values || {};
+  $("#sheet").innerHTML = `<div class="sheet-back" id="back"><form class="sheet" id="f" role="dialog" aria-label="${esc(title)}">
+    <div class="card-head"><h2>${esc(title)}</h2><button type="button" class="link" id="f-close">Fechar</button></div>
+    ${fields.map(f => `<div class="field"><label for="${fid(f.k)}">${esc(f.l)}</label>${
+      f.type === "select" ? `<select id="${fid(f.k)}" name="${f.k}">${f.ops.map(o => `<option ${String(v[f.k] ?? "") === String(o) ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`
+      : f.type === "area" ? `<textarea id="${fid(f.k)}" name="${f.k}">${esc(v[f.k])}</textarea>`
+      : `<input id="${fid(f.k)}" name="${f.k}" type="${f.type || "text"}" ${f.type === "number" ? 'step="any" inputmode="decimal"' : ""} value="${esc(v[f.k])}" ${f.req ? "required" : ""}>`}</div>`).join("")}
+    <div class="row"><button class="btn" type="submit" id="f-save">Salvar</button>${onDelete ? '<button class="btn danger" type="button" id="f-del">Apagar</button>' : ""}</div>
+  </form></div>`;
+  const close = () => { $("#sheet").innerHTML = ""; };
+  $("#f-close").onclick = close;
+  $("#back").onclick = (e) => { if (e.target.id === "back") close(); };
+  $("#f").onsubmit = (e) => {
+    e.preventDefault();
+    const out = {};
+    fields.forEach(f => { let x = document.getElementById(fid(f.k)).value; if (f.type === "number") x = x === "" ? "" : Number(String(x).replace(",", ".")); out[f.k] = x; });
+    onSave(out); save(); close(); render();
+  };
+  if (onDelete) $("#f-del").onclick = () => { onDelete(); save(); close(); render(); };
+  setTimeout(() => { const first = $("#f input, #f select, #f textarea"); first && first.focus(); }, 30);
+}
+
+/* ---------- cálculos ---------- */
+const streak = (dias) => { let n = 0, d = TODAY(); if (!dias[d]) d = addDays(d, -1); while (dias[d]) { n++; d = addDays(d, -1); } return n; };
+const prazoPill = (c) => {
+  if (c.etapa === ETAPAS.length - 1) return '<span class="pill ok">Entregue</span>';
+  if (!c.prazo) return '<span class="pill">Sem prazo</span>';
+  const d = diffDays(c.prazo, TODAY());
+  if (d < 0) return `<span class="pill late">Atrasado ${-d} dia${d === -1 ? "" : "s"}</span>`;
+  if (d <= 5) return `<span class="pill warn">${d === 0 ? "Vence hoje" : `Faltam ${d} dia${d === 1 ? "" : "s"}`}</span>`;
+  return `<span class="pill">${fmtDate(c.prazo)}</span>`;
+};
+const meu = (g) => !g.quem || g.quem === "Eu";
+const gastoMes = () => D.fin.gastos.filter(g => meu(g) && ym(g.date) === ym(TODAY())).reduce((s, g) => s + (Number(g.val) || 0), 0);
+const contasPendentes = () => D.fin.contas.filter(c => !c.pagos[ym(TODAY())]);
+function saudacao() {
+  const h = new Date().getHours();
+  const n = esc(D.nome || "você");
+  if (h < 12) return [`Bom dia, ${n}!`, "Bora fazer o dia render (sem pressa)."];
+  if (h < 18) return [`Boa tarde, ${n}!`, "Já almoçou? Água também conta."];
+  return [`Boa noite, ${n}!`, D.cfg.treino ? `Hora do ${esc(D.cfg.treino)}. Depois, descanso merecido.` : "Hora de desacelerar. Descanso merecido."];
+}
+
+/* ---------- telas ---------- */
+function vInicio() {
+  const t = TODAY(), [oi, frase] = saudacao();
+  const hoje = D.eventos.filter(e => e.date === t).sort((a, b) => a.time.localeCompare(b.time));
+  const casos = D.casos.filter(c => c.etapa < ETAPAS.length - 1).sort((a, b) => (a.prazo || "9").localeCompare(b.prazo || "9")).slice(0, 3);
+  const copos = D.agua[t] || 0;
+  const tarefas = D.tarefas.filter(x => !x.done).slice(0, 4);
+  const card = D.cardapio[SEMANA[(new Date().getDay() + 6) % 7]];
+  const pend = contasPendentes().sort((a, b) => a.dia - b.dia);
+  const pesado = !!D.pesado[t];
+  if (pesado) return `
+  <header class="top"><div class="brand">${TREE}Fluxo</div><button class="link" data-go="ajustes" id="go-ajustes">Ajustes</button></header>
+  <div><h1>Dia pesado. Pega leve.</h1><p class="sub">Escondi o que não é urgente. Hoje vale o básico: água, comida e descanso.</p></div>
+  ${D.cfg.frase ? `<p class="quote">“${esc(D.cfg.frase)}”</p>` : ""}
+  <section class="card"><h2>Só o que importa hoje</h2><ul class="list">
+    ${hoje.map(e => `<li class="item"><span class="dot" style="background:${CATS[e.cat] || "#999"}"></span><span class="grow">${esc(e.title)}</span><span class="meta">${esc(e.time)}</span></li>`).join("")}
+    ${D.casos.filter(c => c.etapa < ETAPAS.length - 1 && c.prazo && diffDays(c.prazo, t) <= 1).map(c => `<li class="item"><span class="grow"><b>${esc(c.ini)}</b> · ${esc(c.tipo)}</span>${prazoPill(c)}</li>`).join("")}
+  </ul></section>
+  <button class="tile" data-go="habitos"><span class="k">Água hoje</span><span class="v">${copos} de ${D.metaAgua}</span></button>
+  <section class="card"><h2>Ideias para desligar</h2><p class="sub">Um jogo sem culpa, banho demorado, deitar com as cachorras, dormir mais cedo.</p></section>
+  <button class="btn soft" id="pesado">Já estou melhor, mostrar tudo</button>`;
+  return `
+  <header class="top"><div class="brand">${TREE}Fluxo</div><button class="link" data-go="ajustes" id="go-ajustes">Ajustes</button></header>
+  ${D.demo ? '<p class="demo">Os itens que aparecem agora são exemplos. Em Ajustes dá para apagar tudo e começar do zero.</p>' : ""}
+  <div><h1>${oi}</h1><p class="sub">${frase}</p></div>
+  ${D.cfg.frase ? `<p class="quote">“${esc(D.cfg.frase)}”</p>` : ""}
+  <button class="btn soft" id="pesado">Hoje foi um dia pesado</button>
+  ${D.modulos.financas && gastoMes() > D.fin.orcamento ? `<p class="demo" style="background:#f6e3e6;color:var(--danger)">Você passou do limite do mês em ${brl(gastoMes() - D.fin.orcamento)}. Respira: dá para ajustar até o fim do mês.</p>` : ""}
+  <div class="tiles">
+    ${D.modulos.habitos ? `<button class="tile" data-go="habitos" id="tile-agua"><span class="k">Água hoje</span><span class="v">${copos} de ${D.metaAgua}</span><span class="meta sub">copos de 250 ml</span></button>` : ""}
+    ${D.modulos.financas ? `<button class="tile" data-go="financas" id="tile-gasto"><span class="k">Gasto no mês</span><span class="v">${brl(gastoMes())}</span><span class="meta sub">de ${brl(D.fin.orcamento)}</span></button>` : ""}
+  </div>
+  ${D.modulos.agenda ? `<section class="card"><div class="card-head"><h2>Hoje</h2><button class="link" data-go="agenda">Agenda</button></div>
+    ${hoje.length ? `<ul class="list">${hoje.map(e => `<li class="item"><span class="dot" style="background:${CATS[e.cat] || "#999"}"></span><span class="grow"><span class="t">${esc(e.title)}</span></span><span class="meta">${esc(e.time)}</span></li>`).join("")}</ul>` : '<p class="empty">Nada marcado hoje.</p>'}</section>` : ""}
+  ${D.modulos.casos ? `<section class="card"><div class="card-head"><h2>Casos com prazo</h2><button class="link" data-go="casos">Ver todos</button></div>
+    ${casos.length ? `<ul class="list">${casos.map(c => `<li class="item"><span class="grow"><span class="t"><b>${esc(c.ini)}</b> · ${esc(c.tipo)}</span><br><span class="meta">${esc(ETAPAS[c.etapa])}</span></span>${prazoPill(c)}</li>`).join("")}</ul>` : '<p class="empty">Nenhum caso em andamento.</p>'}</section>` : ""}
+  ${D.modulos.tarefas ? `<section class="card"><div class="card-head"><h2>Tarefas</h2><button class="link" data-go="tarefas">Ver todas</button></div>
+    ${tarefas.length ? `<ul class="list">${tarefas.map(x => taskItem(x)).join("")}</ul>` : '<p class="empty">Tudo feito. Orgulho!</p>'}</section>` : ""}
+  ${D.modulos.financas && pend.length ? `<section class="card"><div class="card-head"><h2>Contas do mês</h2><button class="link" data-go="financas">Dinheiro</button></div>
+    <ul class="list">${pend.slice(0, 3).map(c => contaItem(c)).join("")}</ul></section>` : ""}
+  ${D.modulos.pets && D.pets.some(p => diffDays(p.date, t) <= 3) ? `<section class="card"><div class="card-head"><h2>${esc(petsNome())}</h2><button class="link" data-go="pets">Ver</button></div><ul class="list">${D.pets.filter(p => diffDays(p.date, t) <= 3).map(petItem).join("")}</ul></section>` : ""}
+  ${D.modulos.alimentacao && card ? `<section class="card"><div class="card-head"><h2>Cardápio de hoje</h2><button class="link" data-go="alimentacao">Semana</button></div>
+    <p class="sub"><b>Café:</b> ${esc(card.cafe)}<br><b>Almoço:</b> ${esc(card.almoco)}<br><b>Jantar:</b> ${esc(card.jantar)}</p></section>` : ""}
+  `;
+}
+
+function taskItem(x) {
+  return `<li class="item ${x.done ? "done" : ""}"><button class="check" aria-label="Concluir ${esc(x.t)}" aria-pressed="${x.done}" data-task="${x.id}"></button>
+    <span class="grow"><span class="t">${esc(x.t)}</span>${x.date ? `<br><span class="meta">${fmtDate(x.date)}</span>` : ""}</span>
+    <button class="edit" data-edit-task="${x.id}" aria-label="Editar">Editar</button></li>`;
+}
+function contaItem(c) {
+  const pago = !!c.pagos[ym(TODAY())];
+  const dia = new Date().getDate();
+  const pill = pago ? '<span class="pill ok">Paga</span>' : c.dia < dia ? '<span class="pill late">Atrasada</span>' : c.dia - dia <= 3 ? `<span class="pill warn">Vence dia ${c.dia}</span>` : `<span class="pill">Dia ${c.dia}</span>`;
+  return `<li class="item ${pago ? "done" : ""}"><button class="check" aria-label="Marcar ${esc(c.desc)} como paga" aria-pressed="${pago}" data-conta="${c.id}"></button>
+    <span class="grow"><span class="t">${esc(c.desc)}</span><br><span class="meta">${brl(c.val)}</span></span>${pill}<button class="edit" data-edit-conta="${c.id}">Editar</button></li>`;
+}
+
+function vAgenda() {
+  const [y, m] = agendaMes.split("-").map(Number);
+  const first = new Date(y, m - 1, 1), start = (first.getDay() + 6) % 7;
+  const days = [];
+  for (let i = 0; i < 42; i++) { const d = new Date(y, m - 1, 1 - start + i); days.push(iso(d)); }
+  const evDia = D.eventos.filter(e => e.date === agendaDia).sort((a, b) => a.time.localeCompare(b.time));
+  return `
+  <div class="card-head"><h1>Agenda</h1><button class="btn" id="add-evento">+ Compromisso</button></div>
+  <section class="card">
+    <div class="card-head"><button class="link" id="mes-prev" aria-label="Mês anterior">‹</button><h2>${MES[m - 1]} de ${y}</h2><button class="link" id="mes-next" aria-label="Próximo mês">›</button></div>
+    <div class="month">${["S","T","Q","Q","S","S","D"].map(w => `<span class="wd">${w}</span>`).join("")}
+      ${days.map(d => { const evs = D.eventos.filter(e => e.date === d); return `<button class="day ${ym(d) !== agendaMes ? "out" : ""} ${d === TODAY() ? "today" : ""}" data-dia="${d}" aria-pressed="${d === agendaDia}" aria-label="${fmtDate(d)}, ${evs.length} compromissos">${Number(d.slice(8))}<span class="dots">${evs.slice(0, 3).map(e => `<i style="background:${CATS[e.cat] || "#999"}"></i>`).join("")}</span></button>`; }).join("")}
+    </div>
+    <div class="row" style="flex-wrap:wrap;gap:12px">${Object.entries(CATS).map(([k, c]) => `<span class="row meta" style="gap:5px;font-size:13px;color:var(--muted)"><span class="dot" style="background:${c}"></span>${k}</span>`).join("")}</div>
+  </section>
+  <section class="card"><h2>${fmtDate(agendaDia)}</h2>
+    ${evDia.length ? `<ul class="list">${evDia.map(e => `<li class="item"><span class="dot" style="background:${CATS[e.cat] || "#999"}"></span><span class="grow"><span class="t">${esc(e.title)}</span><br><span class="meta">${esc(e.time)} · ${esc(e.cat)}</span></span><button class="edit" data-edit-evento="${e.id}">Editar</button></li>`).join("")}</ul>` : '<p class="empty">Dia livre. Toque em “+ Compromisso” para marcar algo.</p>'}
+  </section>
+  <p class="empty">Lembretes: 1 dia antes e 1 hora antes. A ligação com o Google Agenda entra na versão final.</p>`;
+}
+const evFields = [{ k: "title", l: "O quê", req: true }, { k: "date", l: "Dia", type: "date", req: true }, { k: "time", l: "Hora", type: "time" }, { k: "cat", l: "Categoria", type: "select", ops: Object.keys(CATS) }];
+
+function vCasos() {
+  const ativos = D.casos.filter(c => c.etapa < ETAPAS.length - 1).sort((a, b) => (a.prazo || "9").localeCompare(b.prazo || "9"));
+  const entregues = D.casos.filter(c => c.etapa === ETAPAS.length - 1);
+  const noMes = entregues.filter(c => c.entregueEm && ym(c.entregueEm) === ym(TODAY()) && c.tipo === "Laudo psicológico").length;
+  const meta = D.metaLaudos || 4;
+  const etapaPill = (c) => { const p = (c.prazosEtapa || {})[c.etapa]; if (!p || c.etapa === ETAPAS.length - 1) return ""; const d = diffDays(p, TODAY()); return `<span class="pill ${d < 0 ? "late" : d <= 1 ? "warn" : ""}">Etapa até ${fmtDate(p)}</span>`; };
+  const caso = (c) => `<li class="card" style="gap:8px">
+      <div class="card-head"><span><b>${esc(c.ini)}</b> · ${esc(c.tipo)}</span>${prazoPill(c)}</div>
+      <div class="steps" aria-hidden="true">${ETAPAS.map((_, i) => `<i class="${i <= c.etapa ? "on" : ""}"></i>`).join("")}</div>
+      <div class="row" style="gap:6px;flex-wrap:wrap">${etapaPill(c)}</div>
+      <div class="card-head"><span class="meta sub">Etapa: <b>${esc(ETAPAS[c.etapa])}</b></span>
+        <span class="row"><button class="btn soft" data-etapa="${c.id}" data-dir="-1" ${c.etapa === 0 ? "disabled" : ""} aria-label="Voltar etapa">‹</button><button class="btn sage" data-etapa="${c.id}" data-dir="1" ${c.etapa === ETAPAS.length - 1 ? "disabled" : ""}>Avançar</button><button class="edit" data-edit-caso="${c.id}">Editar</button></span></div>
+      ${c.notas ? `<p class="sub" style="font-size:14px">${esc(c.notas)}</p>` : ""}
+      ${c.etapa < ETAPAS.length - 1 ? `<button class="link" data-visita="${c.id}">+ Marcar visita ou entrevista na agenda</button>` : ""}</li>`;
+  return `
+  <div class="card-head"><h1>Casos</h1><button class="btn" id="add-caso">+ Caso</button></div>
+  <p class="sub">Só iniciais, por sigilo. Para avançar uma etapa, toque em “Avançar”.</p>
+  <section class="card"><div class="card-head"><h2>Meta de ${MES[new Date().getMonth()]}</h2><span class="pill ${noMes >= meta ? "ok" : ""}">${noMes} de ${meta} laudos</span></div>
+    <div class="bar"><i style="width:${Math.min(100, noMes / meta * 100)}%;background:var(--lilac)"></i></div></section>
+  ${ativos.length ? `<ul class="list" style="gap:10px">${ativos.map(caso).join("")}</ul>` : '<p class="empty">Nenhum caso em andamento.</p>'}
+  ${entregues.length ? `<h2>Entregues</h2><ul class="list" style="gap:10px">${entregues.map(caso).join("")}</ul>` : ""}`;
+}
+function saveCaso(c, o) {
+  const idx = ETAPAS.indexOf(o.etapa);
+  c.prazosEtapa = c.prazosEtapa || {};
+  if (o.prazoEtapa) c.prazosEtapa[idx] = o.prazoEtapa; else delete c.prazosEtapa[idx];
+  if (idx === ETAPAS.length - 1 && c.etapa !== idx) c.entregueEm = TODAY();
+  Object.assign(c, { ini: o.ini, tipo: o.tipo, prazo: o.prazo, notas: o.notas, etapa: idx });
+}
+const casoFields = [{ k: "ini", l: "Iniciais das partes", req: true }, { k: "tipo", l: "Documento", type: "select", ops: ["Estudo psicossocial", "Laudo psicológico", "Relatório", "Parecer", "Informação técnica"] }, { k: "prazo", l: "Prazo final", type: "date" }, { k: "etapa", l: "Etapa", type: "select", ops: ETAPAS }, { k: "prazoEtapa", l: "Prazo desta etapa (opcional)", type: "date" }, { k: "notas", l: "Anotações (sem dados que identifiquem)", type: "area" }];
+
+const LIMCATS = ["Mercado", "Comida fora", "Compras", "Roupas", "Jogos", "Casa", "Transporte", "Pets", "Saúde", "Lazer", "Estudos", "Outros"];
+function vFinancas() {
+  const mes = ym(TODAY()), g = gastoMes(), pct = Math.min(100, Math.round(g / (D.fin.orcamento || 1) * 100));
+  const car = D.fin.carro;
+  const cpct = Math.min(100, Math.round(car.guardado / (car.alvo || 1) * 100));
+  const meses = car.prazo ? Math.max(1, (Number(car.prazo.slice(0, 4)) - new Date().getFullYear()) * 12 + Number(car.prazo.slice(5, 7)) - (new Date().getMonth() + 1)) : 0;
+  const porMes = meses ? Math.max(0, (car.alvo - car.guardado) / meses) : 0;
+  const doMes = D.fin.gastos.filter(x => ym(x.date) === mes);
+  const porCat = {}; doMes.filter(meu).forEach(x => porCat[x.cat] = (porCat[x.cat] || 0) + Number(x.val));
+  const porCartao = {}; doMes.forEach(x => { const k = x.cartao || "Sem cartão"; porCartao[k] = (porCartao[k] || 0) + Number(x.val); });
+  const outros = {}; D.fin.gastos.filter(x => !meu(x) && !x.devolvido).forEach(x => (outros[x.quem] = outros[x.quem] || []).push(x));
+  const gastos = D.fin.gastos.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
+  const maior = Object.entries(porCat).sort((a, b) => b[1] - a[1])[0];
+  return `
+  <div class="card-head"><h1>Dinheiro</h1><button class="btn" id="add-gasto">+ Gasto</button></div>
+  ${D.cfg.salario ? `<p class="sub" style="font-size:14px">Salário: ${esc(D.cfg.salario)}.</p>` : ""}
+  <section class="card"><div class="card-head"><h2>Meus gastos em ${MES[new Date().getMonth()]}</h2><button class="link" id="edit-orc">Mudar limite</button></div>
+    <div class="row" style="justify-content:space-between"><b style="font-size:22px">${brl(g)}</b><span class="sub">de ${brl(D.fin.orcamento)}</span></div>
+    <div class="bar"><i style="width:${pct}%;background:${pct >= 100 ? "var(--danger)" : pct > 85 ? "var(--rose)" : "var(--sage)"}"></i></div>
+    ${pct >= 100 ? `<span class="pill late">Passou do limite em ${brl(g - D.fin.orcamento)}</span>` : pct > 85 ? '<span class="pill warn">Perto do limite</span>' : ""}
+    <p class="empty">Só os seus gastos. O que outras pessoas gastaram no seu cartão fica separado lá embaixo.</p></section>
+  <section class="card"><div class="card-head"><h2>Limites por categoria</h2><button class="link" id="edit-limites">Mudar</button></div>
+    ${Object.entries(D.fin.limites || {}).map(([k, lim]) => { const v = porCat[k] || 0, p = Math.min(100, Math.round(v / lim * 100)); return `<div style="display:grid;gap:4px"><div class="row" style="justify-content:space-between;font-size:14px"><span>${esc(k)}</span><span class="${v > lim ? "" : "sub"}" style="${v > lim ? "color:var(--danger);font-weight:700" : ""}">${brl(v)} de ${brl(lim)}</span></div><div class="bar"><i style="width:${p}%;background:${v > lim ? "var(--danger)" : p > 85 ? "var(--rose)" : "var(--sage)"}"></i></div></div>`; }).join("") || '<p class="empty">Nenhum limite ainda.</p>'}</section>
+  <section class="card"><div class="card-head"><h2>Contas do mês</h2><button class="link" id="add-conta">+ Conta</button></div>
+    <ul class="list">${D.fin.contas.slice().sort((a, b) => a.dia - b.dia).map(contaItem).join("")}</ul>
+    <p class="empty">Lembrete 2 dias antes de cada vencimento (na versão final).</p></section>
+  <section class="card"><div class="card-head"><h2>Cartões este mês</h2><button class="link" id="edit-cartoes">Renomear</button></div>
+    <ul class="list">${D.fin.cartoes.map(k => `<li class="item"><span class="grow">${esc(k)}</span><b>${brl(porCartao[k] || 0)}</b></li>`).join("")}</ul></section>
+  <section class="card"><h2>Gastos de outras pessoas no meu cartão</h2>
+    ${Object.keys(outros).length ? `<ul class="list">${Object.entries(outros).map(([q, xs]) => `<li class="item"><span class="grow"><span class="t"><b>${esc(q)}</b> me deve ${brl(xs.reduce((s, x) => s + Number(x.val), 0))}</span><br><span class="meta">${xs.map(x => `${esc(x.desc)} (${esc(x.cartao || "")})`).join(", ")}</span></span><button class="btn sage" data-recebi="${esc(q)}">Recebi</button></li>`).join("")}</ul>` : '<p class="empty">Ninguém te deve nada agora.</p>'}
+    <p class="empty">Ao lançar um gasto, troque “De quem é” para o nome da pessoa.</p></section>
+  <section class="card"><div class="card-head"><h2>Meta: ${esc(D.cfg.meta || "Meta")}</h2><button class="link" id="edit-carro">Atualizar</button></div>
+    <div class="row" style="justify-content:space-between"><b>${brl(car.guardado)}</b><span class="sub">de ${brl(car.alvo)} · ${cpct}%</span></div>
+    <div class="bar"><i style="width:${cpct}%;background:var(--lilac)"></i></div>
+    ${meses ? `<p class="sub" style="font-size:14px">Até ${MES[Number(car.prazo.slice(5, 7)) - 1]} de ${car.prazo.slice(0, 4)}: faltam ${meses} meses. Guardando ${brl(porMes)} por mês, você chega lá.</p>` : ""}</section>
+  <section class="card"><div class="card-head"><h2>Lista de espera</h2><button class="link" id="add-espera">+ Vontade de comprar</button></div>
+    <p class="sub" style="font-size:14px">Bateu vontade de comprar? Anota aqui e espera 2 dias. Se ainda quiser, compra sem culpa.</p>
+    <span class="pill ok">Você já economizou ${brl(D.fin.economia || 0)} desistindo de compras</span>
+    ${D.fin.espera.length ? `<ul class="list">${D.fin.espera.map(x => { const d = diffDays(TODAY(), x.criado); return `<li class="item"><span class="grow"><span class="t">${esc(x.desc)}</span><br><span class="meta">${brl(x.val)}</span></span>${d >= 2 ? '<span class="pill ok">Pode decidir</span>' : `<span class="pill warn">Espera mais ${2 - d} dia${2 - d === 1 ? "" : "s"}</span>`}<button class="edit" data-espera="${x.id}">Decidir</button></li>`; }).join("")}</ul>` : '<p class="empty">Nada na espera.</p>'}</section>
+  <section class="card"><h2>Resumo do mês até agora</h2>
+    <p class="sub" style="font-size:14px">Meus gastos: <b>${brl(g)}</b><br>Maior categoria: <b>${maior ? `${esc(maior[0])} (${brl(maior[1])})` : "nenhuma"}</b><br>Outras pessoas no meu cartão: <b>${brl(doMes.filter(x => !meu(x)).reduce((s, x) => s + Number(x.val), 0))}</b><br>Economizado na lista de espera: <b>${brl(D.fin.economia || 0)}</b></p>
+    <p class="empty">No último dia do mês, este resumo chega como notificação (na versão final).</p></section>
+  <section class="card"><h2>Últimos gastos</h2>
+    <ul class="list">${gastos.map(x => `<li class="item"><span class="grow"><span class="t">${esc(x.desc)}</span><br><span class="meta">${fmtDate(x.date)} · ${esc(x.cat)}${x.cartao ? " · " + esc(x.cartao) : ""}${!meu(x) ? " · de " + esc(x.quem) : ""}</span></span><b>${brl(x.val)}</b><button class="edit" data-edit-gasto="${x.id}">Editar</button></li>`).join("")}</ul></section>`;
+}
+const gastoF = () => [{ k: "desc", l: "Com o quê", req: true }, { k: "val", l: "Valor (R$)", type: "number", req: true }, { k: "date", l: "Dia", type: "date" }, { k: "cat", l: "Categoria", type: "select", ops: LIMCATS }, { k: "cartao", l: "Cartão", type: "select", ops: [...D.fin.cartoes, "Pix ou dinheiro"] }, { k: "quem", l: "De quem é o gasto", h: "", type: "text" }];
+const contaFields = [{ k: "desc", l: "Conta", req: true }, { k: "val", l: "Valor (R$)", type: "number" }, { k: "dia", l: "Vence todo dia", type: "number", req: true }];
+
+function vTarefas() {
+  const grupos = {};
+  D.tarefas.forEach(x => (grupos[x.cat || "Outras"] = grupos[x.cat || "Outras"] || []).push(x));
+  return `<div class="card-head"><h1>Tarefas</h1><button class="btn" id="add-tarefa">+ Tarefa</button></div>
+  ${Object.entries(grupos).map(([k, xs]) => `<section class="card"><h2>${esc(k)}</h2><ul class="list">${xs.sort((a, b) => a.done - b.done).map(taskItem).join("")}</ul></section>`).join("") || '<p class="empty">Nenhuma tarefa.</p>'}`;
+}
+const tarefaFields = [{ k: "t", l: "Tarefa", req: true }, { k: "cat", l: "Categoria", type: "select", ops: ["Casa", "Contas", "Trabalho", "Pessoal", "Estudos", "Pets", "Metas do ano"] }, { k: "date", l: "Para quando (opcional)", type: "date" }];
+
+const RECEITAS = [
+  ["Tapioca de frango desfiado", 15, "café ou jantar"], ["Omelete de legumes", 10, "jantar"], ["Crepioca com queijo sem lactose", 10, "café"],
+  ["Frango grelhado com batata-doce na airfryer", 30, "almoço"], ["Tambaqui na airfryer com salada", 25, "almoço"], ["Cuscuz com ovo e tomate", 15, "café ou jantar"],
+  ["Arroz, feijão e carne moída com legumes", 30, "almoço"], ["Caldo de macaxeira com frango", 30, "jantar"], ["Panqueca de banana com aveia sem glúten", 10, "café"],
+  ["Wrap de tapioca com atum", 10, "jantar"]
+];
+function vAlimentacao() {
+  return `<div class="card-head"><h1>Cardápio da semana</h1></div>
+  <p class="sub">Sem lactose e sem glúten. Escreva direto na tabela: salva sozinho.</p>
+  <section class="card scroll-x"><table class="menu-grid"><thead><tr><th></th><th>Café</th><th>Almoço</th><th>Jantar</th></tr></thead><tbody>
+  ${SEMANA.map(d => `<tr><td><b>${d}</b></td>${["cafe", "almoco", "jantar"].map(r => `<td><input aria-label="${r} de ${d}" data-card="${d}.${r}" value="${esc(D.cardapio[d][r])}"></td>`).join("")}</tr>`).join("")}
+  </tbody></table></section>
+  <section class="card"><h2>Ideias rápidas (até 30 min, sem lactose e sem glúten)</h2><ul class="list">${RECEITAS.map((r, i) => `<li class="item"><span class="grow"><span class="t">${esc(r[0])}</span><br><span class="meta">${r[1]} min · ${esc(r[2])}</span></span><button class="edit" data-receita="${i}">Pôr no jantar de hoje</button></li>`).join("")}</ul></section>
+  <button class="btn sage" id="gerar-lista">Mandar o cardápio para a lista de mercado (depois você ajusta)</button>
+  <p class="empty">Na versão final, o app sugere um cardápio rápido de fazer e monta a lista de mercado sozinho.</p>`;
+}
+function vMercado() {
+  return `<div class="card-head"><h1>Lista de mercado</h1><button class="btn" id="add-mercado">+ Item</button></div>
+  <section class="card"><ul class="list">${D.mercado.sort((a, b) => a.done - b.done).map(x => `<li class="item ${x.done ? "done" : ""}"><button class="check" aria-pressed="${x.done}" data-merc="${x.id}" aria-label="Comprado"></button><span class="grow t">${esc(x.t)}</span><button class="edit" data-del-merc="${x.id}">Tirar</button></li>`).join("") || '<p class="empty">Lista vazia.</p>'}</ul></section>
+  <button class="btn soft" id="limpar-mercado">Tirar os itens já comprados</button>`;
+}
+function vTreino() {
+  const t = TODAY(), sem = []; for (let i = 6; i >= 0; i--) sem.push(addDays(t, -i));
+  const feitos = sem.filter(d => D.treinos[d]).length;
+  return `<h1>Treino</h1><p class="sub">${D.cfg.treino ? esc(D.cfg.treino) + ". " : ""}Sem balança, só constância.</p>
+  <section class="card"><div class="card-head"><h2>Últimos 7 dias</h2><span class="pill ${feitos >= 3 ? "ok" : ""}">${feitos} treino${feitos === 1 ? "" : "s"}</span></div>
+    <div class="month" style="grid-template-columns:repeat(7,1fr)">${sem.map(d => `<button class="day ${d === t ? "today" : ""}" aria-pressed="${!!D.treinos[d]}" data-treino="${d}" aria-label="Treinei em ${fmtDate(d)}">${Number(d.slice(8))}<span class="dots"></span></button>`).join("")}</div>
+    <p class="empty">Toque no dia para marcar que treinou. Toque de novo para desmarcar.</p></section>
+  ${D.treinos[t] ? `<section class="card"><h2>Treino de hoje</h2><button class="btn soft" id="treino-tempo">Tempo: ${D.treinos[t].min || 0} min · mudar</button></section>` : `<button class="btn" data-treino="${t}" id="treinei-hoje">Treinei hoje!</button>`}
+  <p class="empty">Na versão final dá para puxar o tempo do relógio Huawei, se ele permitir.</p>`;
+}
+const medalha = (s) => s >= 100 ? '<span class="pill ok">Medalha 100 dias</span>' : s >= 30 ? '<span class="pill ok">Medalha 30 dias</span>' : s >= 7 ? '<span class="pill ok">Medalha 7 dias</span>' : s >= 4 ? `<span class="pill">Faltam ${7 - s} para a medalha</span>` : "";
+function vHabitos() {
+  const t = TODAY(), copos = D.agua[t] || 0;
+  return `<div class="card-head"><h1>Hábitos</h1><button class="btn" id="add-habito">+ Hábito</button></div>
+  <section class="card"><div class="card-head"><h2>Água</h2><span class="pill">${copos * 250} ml de ${D.metaAgua * 250} ml</span></div>
+    <div class="water">${Array.from({ length: D.metaAgua }, (_, i) => `<button class="cup" aria-label="Copo ${i + 1}" aria-pressed="${i < copos}" data-cup="${i + 1}"></button>`).join("")}</div>
+    <p class="empty">Meta pensada para o seu peso (cerca de 35 ml por quilo). Toque nos copos.</p></section>
+  <section class="card"><h2>Hoje</h2><ul class="list">${D.habitos.map(h => { const s = streak(h.dias); return `<li class="item ${h.dias[t] ? "done" : ""}"><button class="check" aria-pressed="${!!h.dias[t]}" data-hab="${h.id}" aria-label="Fiz: ${esc(h.nome)}"></button><span class="grow"><span class="t">${esc(h.nome)}</span><br><span class="meta">${s ? `${s} dia${s === 1 ? "" : "s"} seguidos` : "Começa hoje?"}</span></span>${medalha(s)}<button class="edit" data-edit-hab="${h.id}">Editar</button></li>`; }).join("")}</ul></section>`;
+}
+function vEstudos() {
+  return `<div class="card-head"><h1>Estudos</h1><button class="btn" id="add-estudo">+ Item</button></div>
+  ${["Curso", "Leitura", "Teste e material"].map(tp => { const xs = D.estudos.filter(x => x.tipo === tp); return `<section class="card"><h2>${tp === "Curso" ? "Cursos e especializações" : tp === "Leitura" ? "Leituras e artigos" : "Testes e materiais"}</h2>${xs.length ? `<ul class="list">${xs.map(x => `<li class="item ${x.done ? "done" : ""}"><button class="check" aria-pressed="${x.done}" data-est="${x.id}" aria-label="Concluído"></button><span class="grow t">${esc(x.t)}</span><button class="edit" data-edit-est="${x.id}">Editar</button></li>`).join("")}</ul>` : '<p class="empty">Nada aqui ainda.</p>'}</section>`; }).join("")}`;
+}
+function resumoEndo() {
+  const desde = addDays(TODAY(), -30), xs = D.endo.filter(x => x.date >= desde).sort((a, b) => a.date.localeCompare(b.date));
+  if (!xs.length) return "Sem registros nos últimos 30 dias.";
+  const dores = xs.map(x => Number(x.dor) || 0), media = (dores.reduce((s, x) => s + x, 0) / dores.length).toFixed(1);
+  const rem = [...new Set(xs.map(x => x.remedio).filter(Boolean))];
+  const piorou = xs.filter(x => x.comida === "Piorou").length;
+  return `Resumo dos últimos 30 dias (${fmtDate(desde)} a ${fmtDate(TODAY())})\nDias com dor registrada: ${xs.length}\nDor média: ${media} de 10 · maior: ${Math.max(...dores)} de 10\nRemédios usados: ${rem.join(", ") || "nenhum"}\nDias em que a comida piorou: ${piorou}\n\n` + xs.map(x => `${fmtDate(x.date)}: dor ${x.dor}${x.remedio ? ", remédio: " + x.remedio : ""}${x.comida && x.comida !== "Não sei" ? ", comida: " + x.comida.toLowerCase() : ""}${x.obs ? " (" + x.obs + ")" : ""}`).join("\n");
+}
+function vEndo() {
+  const xs = D.endo.slice().sort((a, b) => b.date.localeCompare(a.date));
+  return `<div class="card-head"><h1>Diário de dor</h1><button class="btn" id="add-endo">+ Registro</button></div>
+  <p class="sub">Só a dor, o remédio e a comida do dia, para levar à consulta.</p>
+  <section class="card"><h2>Resumo para a consulta</h2><p class="sub" style="font-size:14px;white-space:pre-line">${esc(resumoEndo()).split("\n\n")[0]}</p><button class="btn soft" id="copiar-endo">Copiar resumo completo</button></section>
+  <section class="card">${xs.length ? `<ul class="list">${xs.map(x => `<li class="item"><span class="grow"><span class="t">Dor ${esc(x.dor)} de 10${x.remedio ? " · " + esc(x.remedio) : ""}</span><br><span class="meta">${fmtDate(x.date)}${x.comida && x.comida !== "Não sei" ? " · comida: " + esc(x.comida.toLowerCase()) : ""}${x.obs ? " · " + esc(x.obs) : ""}</span></span><button class="edit" data-edit-endo="${x.id}">Editar</button></li>`).join("")}</ul>` : '<p class="empty">Nenhum registro.</p>'}</section>`;
+}
+function vLazer() {
+  return `<div class="card-head"><h1>Filmes, séries, livros e jogos</h1><button class="btn" id="add-lazer">+ Item</button></div>
+  <section class="card"><ul class="list">${D.lazer.map(x => `<li class="item ${x.done ? "done" : ""}"><button class="check" aria-pressed="${x.done}" data-laz="${x.id}" aria-label="Visto"></button><span class="grow"><span class="t">${esc(x.t)}</span><br><span class="meta">${esc(x.tipo)}</span></span><button class="edit" data-edit-laz="${x.id}">Editar</button></li>`).join("") || '<p class="empty">Lista vazia.</p>'}</ul></section>`;
+}
+function petItem(p) {
+  const d = diffDays(p.date, TODAY());
+  const pill = d < 0 ? `<span class="pill late">Atrasado</span>` : d === 0 ? '<span class="pill warn">Hoje</span>' : d <= 3 ? `<span class="pill warn">Em ${d} dia${d === 1 ? "" : "s"}</span>` : `<span class="pill">${fmtDate(p.date)}</span>`;
+  return `<li class="item"><button class="check" aria-pressed="false" data-pet-feito="${p.id}" aria-label="Feito: ${esc(p.oque)}"></button><span class="grow"><span class="t">${esc(p.oque)}</span><br><span class="meta">${esc(p.pet)}</span></span>${pill}<button class="edit" data-edit-pet="${p.id}">Editar</button></li>`;
+}
+function vPets() {
+  return `<div class="card-head"><h1>${esc(petsNome())}</h1><button class="btn" id="add-pet">+ Lembrete</button></div>
+  <p class="sub">Vacina, vermífugo, banho. Marque como feito e já agende a próxima.</p>
+  <section class="card">${D.pets.length ? `<ul class="list">${D.pets.slice().sort((a, b) => a.date.localeCompare(b.date)).map(petItem).join("")}</ul>` : '<p class="empty">Nenhum lembrete.</p>'}</section>`;
+}
+function vMais() {
+  const desc = { tarefas: "Por categoria", alimentacao: "Sem lactose e glúten", mercado: "Sai do cardápio", treino: "Marcar os dias", habitos: "Água e sequências", estudos: "Cursos, leituras, testes", endo: "Dor, remédio e comida", lazer: "Para ver, ler e jogar", pets: "Vacina, vermífugo, banho" };
+  return `<h1>Mais</h1><div class="menu">${Object.keys(desc).filter(k => D.modulos[k]).map(k => `<button data-go="${k}" id="menu-${k}"><b>${MODULOS[k]}</b><span>${desc[k]}</span></button>`).join("")}
+  <button data-go="ajustes" id="menu-ajustes"><b>Ajustes</b><span>Ligar e desligar partes</span></button></div>`;
+}
+function vAjustes() {
+  return `<h1>Ajustes</h1>
+  <section class="card"><h2>Meus dados</h2><p class="sub" style="font-size:14px">Nome, frase, pets, treino, salário e meta.</p><button class="btn soft" data-go="setup" id="meus-dados">Mudar meus dados</button></section>
+  <section class="card"><h2>O que aparece no app</h2><p class="sub" style="font-size:14px">Desligue o que não usar. Some da tela, mas nada é apagado.</p>
+    ${Object.entries(MODULOS).map(([k, l]) => `<label class="switch" for="mod-${k}"><span>${l}</span><input type="checkbox" id="mod-${k}" data-mod="${k}" ${D.modulos[k] ? "checked" : ""}></label>`).join("")}</section>
+  <section class="card"><h2>Lembretes</h2><p class="sub" style="font-size:14px">Resumo do dia de manhã · água ao longo do dia · cartão 2 dias antes · hora de desligar · pets.</p><p class="empty">Entram na versão final.</p></section>
+  <section class="card"><h2>Cópia de segurança</h2><p class="sub" style="font-size:14px">Seus dados ficam só neste celular. De vez em quando, faça uma cópia e guarde num e-mail para você.</p><div class="row" style="flex-wrap:wrap"><button class="btn soft" id="backup">Fazer cópia</button><button class="btn soft" id="restaurar">Restaurar cópia</button></div></section>
+  <section class="card"><h2>Horário de silêncio</h2><p class="sub">${esc(D.silencio)}</p><p class="empty">As notificações entram na versão final e respeitam esses horários.</p></section>
+  ${FIREBASE && user ? `<section class="card"><h2>Minha conta</h2><p class="sub" style="font-size:14px">${esc(user.email)} · ${nuvem === "erro" ? "sem conexão agora, salvo neste celular" : "tudo salvo na nuvem"}</p><button class="btn soft" id="sair">Sair da conta</button></section>` : ""}
+  <section class="card"><h2>Começar do zero</h2><p class="sub" style="font-size:14px">Apaga os exemplos e todos os registros deste aparelho.</p><button class="btn danger" id="zerar">Apagar tudo</button></section>`;
+}
+
+function vSetup() {
+  const c = D.cfg, car = D.fin.carro;
+  const f = (id, label, val, extra = "") => `<div class="field"><label for="s-${id}">${label}</label><input id="s-${id}" value="${esc(val)}" ${extra}></div>`;
+  return `<header class="top"><div class="brand">${TREE}Fluxo</div></header>
+  <div><h1>${D.setup ? "Meus dados" : "Oi! Vamos deixar o Fluxo com a sua cara"}</h1><p class="sub">Leva 1 minuto. Fica salvo só neste celular. Dá para mudar depois em Ajustes.</p></div>
+  <form class="card" id="setup-form">
+    ${f("nome", "Como você quer ser chamada?", D.nome, "required")}
+    ${f("frase", "Uma frase sua para a tela inicial (opcional)", c.frase)}
+    ${f("pets", "Nomes dos pets, separados por vírgula (opcional)", c.pets.join(", "))}
+    ${f("treino", "Qual treino você faz? (opcional)", c.treino, 'placeholder="Exemplo: karatê"')}
+    ${f("salario", "Quando cai o salário? (opcional)", c.salario, 'placeholder="Exemplo: dia 5"')}
+    ${f("meta", "Nome da sua meta de dinheiro", c.meta)}
+    ${f("alvo", "Quanto precisa juntar (R$)", car.alvo || "", 'type="number" inputmode="decimal"')}
+    ${f("guardado", "Quanto já tem guardado (R$)", car.guardado || "", 'type="number" inputmode="decimal"')}
+    ${f("prazo", "Até quando (mês)", car.prazo, 'type="month"')}
+    ${f("laudos", "Meta de laudos por mês", D.metaLaudos || 4, 'type="number" inputmode="numeric"')}
+    ${f("silencio", "Horários em que não quer ser incomodada (opcional)", D.silencio)}
+    <button class="btn" type="submit" id="s-ok">${D.setup ? "Salvar" : "Começar"}</button>
+  </form>`;
+}
+const VIEWS = { setup: vSetup, inicio: vInicio, agenda: vAgenda, casos: vCasos, financas: vFinancas, tarefas: vTarefas, alimentacao: vAlimentacao, mercado: vMercado, treino: vTreino, habitos: vHabitos, estudos: vEstudos, endo: vEndo, lazer: vLazer, pets: vPets, mais: vMais, ajustes: vAjustes };
+
+function render() {
+  if (FIREBASE && !user) { $("#app").innerHTML = vLogin(); $(".tabs").style.display = "none"; return; }
+  if (!D.setup) view = "setup";
+  if (!VIEWS[view] || (MODULOS[view] && !D.modulos[view])) view = "inicio";
+  const back = !["inicio", "agenda", "casos", "financas", "mais", "setup"].includes(view) || (view === "setup" && D.setup) ? '<button class="link" data-go="mais" id="voltar">‹ Voltar</button>' : "";
+  $("#app").innerHTML = back + VIEWS[view]();
+  renderTabs();
+}
+
+/* ---------- ações ---------- */
+const byId = (arr, id) => arr.find(x => x.id === id);
+const del = (arr, id) => { const i = arr.findIndex(x => x.id === id); if (i >= 0) arr.splice(i, 1); };
+
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  const ds = b.dataset;
+  if (ds.go) return go(ds.go);
+  if (ds.task) { const x = byId(D.tarefas, ds.task); x.done = !x.done; save(); return render(); }
+  if (ds.editTask) { const x = byId(D.tarefas, ds.editTask); return form("Editar tarefa", tarefaFields, x, o => Object.assign(x, o), () => del(D.tarefas, x.id)); }
+  if (ds.conta) { const c = byId(D.fin.contas, ds.conta), k = ym(TODAY()); c.pagos[k] = !c.pagos[k]; save(); return render(); }
+  if (ds.editConta) { const c = byId(D.fin.contas, ds.editConta); return form("Editar conta", contaFields, c, o => Object.assign(c, o), () => del(D.fin.contas, c.id)); }
+  if (ds.dia) { agendaDia = ds.dia; if (ym(ds.dia) !== agendaMes) agendaMes = ym(ds.dia); return render(); }
+  if (ds.editEvento) { const x = byId(D.eventos, ds.editEvento); return form("Editar compromisso", evFields, x, o => Object.assign(x, o), () => del(D.eventos, x.id)); }
+  if (ds.etapa) { const c = byId(D.casos, ds.etapa); c.etapa = Math.max(0, Math.min(ETAPAS.length - 1, c.etapa + Number(ds.dir))); c.entregueEm = c.etapa === ETAPAS.length - 1 ? TODAY() : ""; save(); return render(); }
+  if (ds.visita) { const c = byId(D.casos, ds.visita); return form("Visita ou entrevista", evFields, { title: `${ETAPAS[c.etapa] === "Visita domiciliar" ? "Visita domiciliar" : "Entrevista"} (caso ${c.ini})`, date: addDays(TODAY(), 1), time: "09:00", cat: "Tribunal" }, o => D.eventos.push({ id: uid(), ...o })); }
+  if (ds.recebi) { D.fin.gastos.forEach(g => { if (g.quem === ds.recebi) g.devolvido = true; }); save(); return render(); }
+  if (ds.editPet) { const x = byId(D.pets, ds.editPet); return form("Editar lembrete", petF(), x, o => Object.assign(x, o), () => del(D.pets, x.id)); }
+  if (ds.petFeito) { const x = byId(D.pets, ds.petFeito); return form("Feito! Quando é a próxima?", [{ k: "date", l: "Próxima vez", type: "date" }], { date: addDays(TODAY(), 30) }, o => { if (o.date) x.date = o.date; else del(D.pets, x.id); }); }
+  if (ds.editCaso) { const c = byId(D.casos, ds.editCaso); return form("Editar caso", casoFields, { ...c, etapa: ETAPAS[c.etapa], prazoEtapa: (c.prazosEtapa || {})[c.etapa] || "" }, o => saveCaso(c, o), () => del(D.casos, c.id)); }
+  if (ds.editGasto) { const x = byId(D.fin.gastos, ds.editGasto); return form("Editar gasto", gastoF(), x, o => Object.assign(x, o), () => del(D.fin.gastos, x.id)); }
+  if (ds.espera) { const x = byId(D.fin.espera, ds.espera); return form("E aí, ainda quer?", [{ k: "dec", l: "Decisão", type: "select", ops: ["Desisti (economizei!)", "Comprei", "Deixa na espera"] }], {}, o => {
+    if (o.dec === "Comprei") { D.fin.gastos.push({ id: uid(), date: TODAY(), desc: x.desc, val: x.val, cat: "Compras", cartao: D.fin.cartoes[0], quem: "Eu" }); del(D.fin.espera, x.id); }
+    else if (o.dec.startsWith("Desisti")) { D.fin.economia = (Number(D.fin.economia) || 0) + (Number(x.val) || 0); del(D.fin.espera, x.id); }
+  }); }
+  if (ds.merc) { const x = byId(D.mercado, ds.merc); x.done = !x.done; save(); return render(); }
+  if (ds.delMerc) { del(D.mercado, ds.delMerc); save(); return render(); }
+  if (ds.treino) { const d = ds.treino; if (D.treinos[d]) delete D.treinos[d]; else D.treinos[d] = { min: 120, obs: "" }; save(); return render(); }
+  if (ds.cup) { const t = TODAY(), n = Number(ds.cup); D.agua[t] = (D.agua[t] || 0) === n ? n - 1 : n; save(); return render(); }
+  if (ds.hab) { const h = byId(D.habitos, ds.hab), t = TODAY(); if (h.dias[t]) delete h.dias[t]; else h.dias[t] = true; save(); return render(); }
+  if (ds.editHab) { const h = byId(D.habitos, ds.editHab); return form("Editar hábito", [{ k: "nome", l: "Hábito", req: true }], h, o => Object.assign(h, o), () => del(D.habitos, h.id)); }
+  if (ds.est) { const x = byId(D.estudos, ds.est); x.done = !x.done; save(); return render(); }
+  if (ds.editEst) { const x = byId(D.estudos, ds.editEst); return form("Editar", estFields, x, o => Object.assign(x, o), () => del(D.estudos, x.id)); }
+  if (ds.editEndo) { const x = byId(D.endo, ds.editEndo); return form("Editar registro", endoFields, x, o => Object.assign(x, o), () => del(D.endo, x.id)); }
+  if (ds.receita) { const d = SEMANA[(new Date().getDay() + 6) % 7]; D.cardapio[d].jantar = RECEITAS[Number(ds.receita)][0]; save(); return render(); }
+  if (ds.laz) { const x = byId(D.lazer, ds.laz); x.done = !x.done; save(); return render(); }
+  if (ds.editLaz) { const x = byId(D.lazer, ds.editLaz); return form("Editar", lazFields, x, o => Object.assign(x, o), () => del(D.lazer, x.id)); }
+
+  switch (b.id) {
+    case "l-modo": loginModo = loginModo === "criar" ? "entrar" : "criar"; loginErro = ""; loginMsg = ""; return render();
+    case "l-esqueci": {
+      const email = $("#l-email").value.trim();
+      if (!email) { loginErro = "Escreva seu e-mail no campo acima e toque de novo em “Esqueci a senha”."; return render(); }
+      fb.A.sendPasswordResetEmail(fb.auth, email).then(() => { loginErro = ""; loginMsg = "Mandei um e-mail para criar uma senha nova. Olhe também o spam."; render(); }).catch(err => { loginErro = ERROS[err.code] || "Não deu certo. Tente de novo."; render(); });
+      return;
+    }
+    case "sair": return form("Sair da conta?", [{ k: "ok", l: "Seus dados continuam salvos na nuvem. Escreva SAIR para confirmar", req: true }], {}, async o => {
+      if (String(o.ok).trim().toUpperCase() !== "SAIR") return;
+      cloudDirty = true; await pushCloud();
+      clearTimeout(cloudTimer); cloudDirty = false; user = null;
+      try { localStorage.removeItem(KEY); } catch (e) {}
+      D = seed(); normalize(); view = "inicio"; loginModo = "entrar"; loginErro = ""; loginMsg = ""; await fb.A.signOut(fb.auth);
+    });
+    case "add-evento": return form("Novo compromisso", evFields, { date: agendaDia, time: "09:00", cat: "Pessoal" }, o => D.eventos.push({ id: uid(), ...o }));
+    case "mes-prev": case "mes-next": { const [y, m] = agendaMes.split("-").map(Number); const d = new Date(y, m - 1 + (b.id === "mes-next" ? 1 : -1), 1); agendaMes = iso(d).slice(0, 7); return render(); }
+    case "add-caso": return form("Novo caso", casoFields, { etapa: ETAPAS[0] }, o => { const c = { id: uid(), prazosEtapa: {} }; D.casos.push(c); saveCaso(c, o); });
+    case "pesado": { const t = TODAY(); if (D.pesado[t]) delete D.pesado[t]; else D.pesado[t] = true; save(); return render(); }
+    case "add-pet": return form("Novo lembrete", petF(), { pet: petF()[0].ops.slice(-1)[0], oque: "Banho", date: addDays(TODAY(), 7) }, o => D.pets.push({ id: uid(), ...o }));
+    case "edit-limites": return form("Limites por categoria (R$ por mês)", LIMCATS.map(k => ({ k, l: k, type: "number" })), D.fin.limites, o => { D.fin.limites = {}; Object.entries(o).forEach(([k, v]) => { if (v) D.fin.limites[k] = v; }); });
+    case "edit-cartoes": return form("Seus cartões", [{ k: "nomes", l: "Nomes, separados por vírgula", req: true }], { nomes: D.fin.cartoes.join(", ") }, o => D.fin.cartoes = o.nomes.split(",").map(x => x.trim()).filter(Boolean));
+    case "copiar-endo": { const txt = resumoEndo(); try { navigator.clipboard.writeText(txt); b.textContent = "Copiado!"; } catch (e) { b.textContent = "Não deu para copiar"; } return; }
+    case "backup": { try { navigator.clipboard.writeText(JSON.stringify(D)); b.textContent = "Cópia feita! Cole num lugar seguro (ex.: um e-mail para você)."; } catch (e) { b.textContent = "Não deu para copiar neste aparelho"; } return; }
+    case "restaurar": return form("Restaurar cópia de segurança", [{ k: "json", l: "Cole aqui o texto da cópia", type: "area", req: true }], {}, o => { try { const x = JSON.parse(o.json); if (x && x.fin) D = x; } catch (e) {} });
+    case "add-gasto": return form("Novo gasto", gastoF(), { date: TODAY(), cat: "Compras", cartao: D.fin.cartoes[0], quem: "Eu" }, o => D.fin.gastos.push({ id: uid(), ...o, quem: (o.quem || "Eu").trim() || "Eu", devolvido: false }));
+    case "add-conta": return form("Nova conta", contaFields, { dia: 10 }, o => D.fin.contas.push({ id: uid(), pagos: {}, ...o }));
+    case "edit-orc": return form("Limite de gastos do mês", [{ k: "orcamento", l: "Valor (R$)", type: "number", req: true }], D.fin, o => D.fin.orcamento = o.orcamento);
+    case "edit-carro": return form("Minha meta", [{ k: "alvo", l: "Quanto custa (R$)", type: "number" }, { k: "guardado", l: "Quanto já guardei (R$)", type: "number" }, { k: "prazo", l: "Até quando (mês)", type: "month" }], D.fin.carro, o => Object.assign(D.fin.carro, o));
+    case "add-espera": return form("Vontade de comprar", [{ k: "desc", l: "O quê", req: true }, { k: "val", l: "Quanto (R$)", type: "number" }], {}, o => D.fin.espera.push({ id: uid(), criado: TODAY(), ...o }));
+    case "add-tarefa": return form("Nova tarefa", tarefaFields, { cat: "Pessoal" }, o => D.tarefas.push({ id: uid(), done: false, ...o }));
+    case "add-mercado": return form("Item do mercado", [{ k: "t", l: "Item", req: true }], {}, o => D.mercado.push({ id: uid(), done: false, ...o }));
+    case "limpar-mercado": D.mercado = D.mercado.filter(x => !x.done); save(); return render();
+    case "gerar-lista": {
+      const norm = (x) => x.toLowerCase().replace(/s$/, "");
+      const ja = new Set(D.mercado.map(x => norm(x.t)));
+      const itens = new Set();
+      SEMANA.forEach(d => ["cafe", "almoco", "jantar"].forEach(r => String(D.cardapio[d][r]).split(/,| e | com /).map(s => s.trim()).filter(s => s && !/^livre$/i.test(s)).forEach(s => itens.add(s.charAt(0).toUpperCase() + s.slice(1)))));
+      let n = 0; itens.forEach(s => { if (!ja.has(norm(s))) { ja.add(norm(s)); D.mercado.push({ id: uid(), t: s, done: false }); n++; } });
+      save(); view = "mercado"; render(); return;
+    }
+    case "treino-tempo": { const t = TODAY(); return form("Tempo de treino", [{ k: "min", l: "Minutos", type: "number" }], D.treinos[t], o => D.treinos[t].min = o.min); }
+    case "add-habito": return form("Novo hábito", [{ k: "nome", l: "Hábito", req: true }], {}, o => D.habitos.push({ id: uid(), dias: {}, ...o }));
+    case "add-estudo": return form("Novo item de estudo", estFields, { tipo: "Curso" }, o => D.estudos.push({ id: uid(), done: false, ...o }));
+    case "add-endo": return form("Registro de hoje", endoFields, { date: TODAY(), dor: 3 }, o => D.endo.push({ id: uid(), ...o }));
+    case "add-lazer": return form("Novo item", lazFields, { tipo: "Série" }, o => D.lazer.push({ id: uid(), done: false, ...o }));
+    case "zerar": return form("Apagar tudo?", [{ k: "ok", l: "Escreva APAGAR para confirmar", req: true }], {}, o => {
+      if (String(o.ok).trim().toUpperCase() === "APAGAR") { const s = seed(); D = { ...s, demo: false, nome: D.nome, modulos: D.modulos, eventos: [], casos: [], tarefas: [], mercado: [], habitos: [], treinos: {}, estudos: [], endo: [], lazer: [], pets: [], pesado: {}, agua: {}, fin: { ...s.fin, economia: 0, gastos: [], contas: [], espera: [], carro: { alvo: 0, guardado: 0, prazo: "" } } }; }
+    });
+  }
+});
+const estFields = [{ k: "t", l: "O quê", req: true }, { k: "tipo", l: "Tipo", type: "select", ops: ["Curso", "Leitura", "Teste e material"] }];
+const endoFields = [{ k: "date", l: "Dia", type: "date" }, { k: "dor", l: "Dor (0 a 10)", type: "number" }, { k: "remedio", l: "Remédio que tomou (se tomou)" }, { k: "comida", l: "A comida do dia…", type: "select", ops: ["Não sei", "Piorou", "Melhorou", "Não mudou"] }, { k: "obs", l: "Observação", type: "area" }];
+const lazFields = [{ k: "t", l: "Título", req: true }, { k: "tipo", l: "Tipo", type: "select", ops: ["Filme", "Série", "Livro", "Jogo"] }];
+const petsNome = () => D.cfg.pets.length ? D.cfg.pets.join(" e ") : "Pets";
+const petF = () => [{ k: "pet", l: "Quem", type: D.cfg.pets.length ? "select" : "text", ops: D.cfg.pets.length > 1 ? [...D.cfg.pets, D.cfg.pets.join(" e ")] : D.cfg.pets }, { k: "oque", l: "O quê", type: "select", ops: ["Banho", "Vermífugo", "Vacina", "Antipulgas", "Veterinário", "Ração", "Outro"] }, { k: "date", l: "Quando", type: "date" }];
+
+document.addEventListener("submit", async (e) => {
+  if (e.target.id !== "login-form") return;
+  e.preventDefault();
+  const email = $("#l-email").value.trim(), senha = $("#l-senha").value;
+  loginErro = ""; loginMsg = ""; $("#l-ok").disabled = true;
+  try {
+    if (loginModo === "criar") await fb.A.createUserWithEmailAndPassword(fb.auth, email, senha);
+    else await fb.A.signInWithEmailAndPassword(fb.auth, email, senha);
+  } catch (err) { loginErro = ERROS[err.code] || "Não deu certo. Tente de novo."; render(); }
+});
+document.addEventListener("submit", (e) => {
+  if (e.target.id !== "setup-form") return;
+  e.preventDefault();
+  const v = (k) => document.getElementById("s-" + k).value.trim();
+  D.nome = v("nome");
+  D.cfg = { frase: v("frase"), pets: v("pets").split(",").map(x => x.trim()).filter(Boolean), treino: v("treino"), salario: v("salario"), meta: v("meta") || "Meta" };
+  D.fin.carro = { alvo: Number(v("alvo")) || 0, guardado: Number(v("guardado")) || 0, prazo: v("prazo") };
+  D.metaLaudos = Number(v("laudos")) || 4;
+  D.silencio = v("silencio");
+  if (!D.cfg.pets.length) D.modulos.pets = false; else if (!D.setup) D.modulos.pets = true;
+  D.setup = true; save(); go("inicio");
+});
+document.addEventListener("input", (e) => {
+  const t = e.target;
+  if (t.dataset.card) { const [d, r] = t.dataset.card.split("."); D.cardapio[d][r] = t.value; save(); }
+  if (t.id === "nome") { D.nome = t.value; save(); }
+});
+document.addEventListener("change", (e) => {
+  const t = e.target;
+  if (t.dataset.mod) { D.modulos[t.dataset.mod] = t.checked; save(); renderTabs(); }
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && $("#sheet").innerHTML) $("#sheet").innerHTML = ""; });
+
+render();
+if (FIREBASE) initFirebase();
+if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>
