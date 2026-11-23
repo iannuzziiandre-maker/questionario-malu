@@ -417,11 +417,11 @@ function finalScreen() {
     nodes.push(el("div", { class: "note" },
       el("p", {}, el("strong", {}, "Para enviar, faça os dois passos:")),
       el("p", {}, "1. Toque em “Gerar PDF e enviar”, escolha o WhatsApp e a conversa com o André."),
-      el("p", {}, "2. Toque em “Enviar mensagem para o André”: o WhatsApp abre direto na conversa com ele, com as respostas já escritas. É só tocar em enviar.")));
+      el("p", {}, "2. Toque em “Enviar mensagem pelo WhatsApp”, escolha a conversa com o André e toque em enviar.")));
     nodes.push(el("div", { class: "copybox" },
       el("button", { type: "button", class: "btn primary", id: "pdf", onclick: () => sharePdf(pdfStatus) }, "1. Gerar PDF e enviar"),
       pdfStatus,
-      el("a", { class: "btn primary", id: "wa", href: "https://wa.me/" + WHATS + "?text=" + encodeURIComponent(asText()), target: "_blank", rel: "noopener", style: "text-align:center;text-decoration:none", onclick: () => { sent = true; persist(); } }, "2. Enviar mensagem para o André")));
+      el("a", { class: "btn primary", id: "wa", href: "https://wa.me/" + WHATS + "?text=" + encodeURIComponent(asText()), target: "_blank", rel: "noopener", style: "text-align:center;text-decoration:none", onclick: () => { sent = true; persist(); } }, "2. Enviar mensagem pelo WhatsApp")));
   }
   const status = el("span", { class: "q-help", id: "copystatus" }, "");
   nodes.push(el("div", { class: "copybox" }, el("button", { type: "button", class: "btn ghost", id: "copy", onclick: async () => {
@@ -431,7 +431,7 @@ function finalScreen() {
   return nodes;
 }
 
-const WHATS = "5592994373779";
+const WHATS = "";
 const latin = (t) => String(t).replace(/→/g, "->").replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/[–—]/g, "-").replace(/…/g, "...").replace(/[^\x00-\xFF]/g, "");
 
 function buildPdf() {
