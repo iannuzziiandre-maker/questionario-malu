@@ -1,0 +1,41 @@
+name: Lembretes do Fluxo
+# A cada 15 minutos: manda os lembretes da Maria e puxa o Google Agenda dela.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: lembretes
+  cancel-in-progress: false
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Instalar
+        working-directory: notificacoes
+        run: npm install --no-audit --no-fund --silent
+      - name: Mandar lembretes
+        working-directory: notificacoes
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+        run: node enviar.js
+      - name: Manter o agendamento ligado
+        # O GitHub desliga agendamentos de repositórios sem novidade há 60 dias. A cada 45 dias deixamos um sinal.
+        run: |
+          ultimo=$(git log -1 --format=%ct)
+          agora=$(date +%s)
+          if [ $((agora - ultimo)) -gt 3888000 ]; then
+            date -u > notificacoes/sinal.txt
+            git config user.name "fluxo-lembretes"
+            git config user.email "fluxo-lembretes@users.noreply.github.com"
+            git add notificacoes/sinal.txt
+            git commit -m "Manter os lembretes ligados"
+            git push
+          fi

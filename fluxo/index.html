@@ -141,7 +141,7 @@ const SEMANA = ["seg","ter","qua","qui","sex","sáb","dom"];
 const ym = (s) => s.slice(0, 7);
 
 const CATS = {
-  Tribunal: "#24365c", Pessoal: "#9b82c9", Estudos: "#8fa98a", Saúde: "#c98b95", Treino: "#5f8fa8", Contas: "#d8b46a"
+  Tribunal: "#24365c", Pessoal: "#9b82c9", Estudos: "#8fa98a", Saúde: "#c98b95", Treino: "#5f8fa8", Contas: "#d8b46a", Google: "#8a94b8"
 };
 const ETAPAS = ["Leitura dos autos", "Entrevistas", "Visita domiciliar", "Rede (escola, CRAS, CREAS, CT)", "Testes", "Escrita e revisão", "Entregue"];
 const MODULOS = {
@@ -190,17 +190,20 @@ const FIREBASE = {
   appId: "1:428490126011:web:0714fd05ec5bb8cebb6f9e"
 };
 const FB_VER = "10.12.2";
+let gEventos = [], gInfo = {}, vapidPublic = "", offline = false;
 let fb = null, user = null, authReady = !FIREBASE, nuvem = "", cloudTimer = null, cloudBusy = false, cloudDirty = false;
 
 let D;
 try { D = JSON.parse(localStorage.getItem(KEY)) || seed(); } catch (e) { D = seed(); }
 function normalize() {
-  D.cfg = Object.assign({ frase: "", pets: [], treino: "", salario: "", meta: "Carro" }, D.cfg || {});
+  D.cfg = Object.assign({ frase: "", pets: [], treino: "", salario: "", meta: "Carro", diario: "", ical: "" }, D.cfg || {});
+  D.notif = Object.assign({ ativas: false, manha: true, horaManha: "06:10", agua: true, contas: true, eventos: true, casos: true, desligar: true, horaDesligar: "23:00", pets: true, tarefas: true, mes: true }, D.notif || {});
   D.pesado = D.pesado || {}; D.pets = D.pets || [];
   D.modulos = Object.assign(Object.fromEntries(Object.keys(MODULOS).map(k => [k, true])), D.modulos || {});
 }
 normalize();
 const save = () => {
+  D.atualizado = Date.now();
   try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) {}
   if (fb && user) { cloudDirty = true; clearTimeout(cloudTimer); cloudTimer = setTimeout(pushCloud, 1200); }
 };
@@ -218,6 +221,7 @@ async function initFirebase() {
     const [app, auth, fs] = await Promise.all([import(base + "firebase-app.js"), import(base + "firebase-auth.js"), import(base + "firebase-firestore.js")]);
     const a = app.initializeApp(FIREBASE);
     const au = auth.getAuth(a);
+    au.languageCode = "pt";
     try { await auth.setPersistence(au, auth.browserLocalPersistence); } catch (e) {}
     fb = { auth: au, db: fs.getFirestore(a), A: auth, doc: fs.doc, getDoc: fs.getDoc, setDoc: fs.setDoc };
     auth.onAuthStateChanged(au, async (u) => {
@@ -225,18 +229,60 @@ async function initFirebase() {
       if (u) {
         try {
           const snap = await fb.getDoc(fb.doc(fb.db, "usuarios", u.uid, "dados", "app"));
-          if (snap.exists()) { D = JSON.parse(snap.data().json); }
+          if (snap.exists()) {
+            const remoto = JSON.parse(snap.data().json);
+            const localMaisNovo = D.owner === u.uid && (D.atualizado || 0) > (remoto.atualizado || 0);
+            if (localMaisNovo) cloudDirty = true; else D = remoto;
+          }
           else if (D.owner && D.owner !== u.uid) { D = seed(); }
           D.owner = u.uid; normalize();
           try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) {}
-          if (!snap.exists()) { cloudDirty = true; pushCloud(); }
+          if (!snap.exists()) cloudDirty = true;
+          if (cloudDirty) pushCloud();
           nuvem = "ok";
+          carregarExtras();
         } catch (e) { nuvem = "erro"; }
       }
       authReady = true; render();
     });
-  } catch (e) { authReady = true; loginErro = "Não consegui conectar. Confira a internet e abra o app de novo."; render(); }
+  } catch (e) {
+    authReady = true;
+    if (D.owner && D.setup) { offline = true; user = { uid: D.owner, email: "", offline: true }; }
+    else loginErro = "Não consegui conectar. Confira a internet e abra o app de novo.";
+    render();
+  }
 }
+function alertaCampo(el, msg) { el.setCustomValidity(msg); el.reportValidity(); setTimeout(() => el.setCustomValidity(""), 3000); }
+function b64u8(b) { const p = "=".repeat((4 - b.length % 4) % 4), s = atob((b + p).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from([...s].map(c => c.charCodeAt(0))); }
+async function ativarNotif() {
+  notifMsg = "";
+  try {
+    if (!vapidPublic) { await carregarExtras(); }
+    if (!vapidPublic) { notifMsg = "O sistema de avisos ainda está sendo ligado. Tente de novo daqui a 15 minutos."; return render(); }
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") { notifMsg = "Você não permitiu as notificações. Dá para mudar em Ajustes do iPhone → Notificações → Fluxo."; return render(); }
+    const reg = await navigator.serviceWorker.ready;
+    const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u8(vapidPublic) });
+    const ref = fb.doc(fb.db, "usuarios", user.uid, "dados", "push");
+    const atual = await fb.getDoc(ref);
+    const subs = ((atual.exists() && atual.data().subs) || []).filter(s => s.endpoint !== sub.endpoint);
+    subs.push(JSON.parse(JSON.stringify(sub)));
+    await fb.setDoc(ref, { subs }, { merge: true });
+    D.notif.ativas = true; save();
+    reg.showNotification("Notificações ativadas 🌿", { body: "Pronto! Seus lembretes vão chegar aqui.", icon: "icon-192.png" });
+  } catch (e) { notifMsg = "Não deu certo agora. Confira a internet e tente de novo."; }
+  render();
+}
+async function carregarExtras() {
+  if (!fb || !user || user.offline) return;
+  const dados = (k) => fb.doc(fb.db, "usuarios", user.uid, "dados", k);
+  try { const g = await fb.getDoc(dados("google")); gInfo = g.exists() ? g.data() : {}; gEventos = gInfo.eventos || []; } catch (e) {}
+  try { const c = await fb.getDoc(dados("config")); vapidPublic = (c.exists() && c.data().vapidPublic) || ""; } catch (e) {}
+  render();
+}
+const todosEventos = () => D.eventos.concat(D.cfg.ical ? gEventos : []);
+const doGoogle = (e) => String(e.id || "").startsWith("g-");
+const SEM_NET = '<p class="demo" style="background:#f8eccd;color:#7a5a12">Sem internet agora. O que você mudar fica guardado no celular e vai para a nuvem quando abrir com internet.</p>';
 let loginModo = "entrar", loginErro = "", loginMsg = "";
 const ERROS = {
   "auth/invalid-email": "Esse e-mail não parece certo.",
@@ -336,7 +382,7 @@ function saudacao() {
 /* ---------- telas ---------- */
 function vInicio() {
   const t = TODAY(), [oi, frase] = saudacao();
-  const hoje = D.eventos.filter(e => e.date === t).sort((a, b) => a.time.localeCompare(b.time));
+  const hoje = todosEventos().filter(e => e.date === t).sort((a, b) => a.time.localeCompare(b.time));
   const casos = D.casos.filter(c => c.etapa < ETAPAS.length - 1).sort((a, b) => (a.prazo || "9").localeCompare(b.prazo || "9")).slice(0, 3);
   const copos = D.agua[t] || 0;
   const tarefas = D.tarefas.filter(x => !x.done).slice(0, 4);
@@ -348,7 +394,7 @@ function vInicio() {
   <div><h1>Dia pesado. Pega leve.</h1><p class="sub">Escondi o que não é urgente. Hoje vale o básico: água, comida e descanso.</p></div>
   ${D.cfg.frase ? `<p class="quote">“${esc(D.cfg.frase)}”</p>` : ""}
   <section class="card"><h2>Só o que importa hoje</h2><ul class="list">
-    ${hoje.map(e => `<li class="item"><span class="dot" style="background:${CATS[e.cat] || "#999"}"></span><span class="grow">${esc(e.title)}</span><span class="meta">${esc(e.time)}</span></li>`).join("")}
+    ${hoje.map(e => `<li class="item"><span class="dot" style="background:${CATS[e.cat] || "#999"}"></span><span class="grow">${esc(e.title)}</span><span class="meta">${hora(e)}</span></li>`).join("")}
     ${D.casos.filter(c => c.etapa < ETAPAS.length - 1 && c.prazo && diffDays(c.prazo, t) <= 1).map(c => `<li class="item"><span class="grow"><b>${esc(c.ini)}</b> · ${esc(c.tipo)}</span>${prazoPill(c)}</li>`).join("")}
   </ul></section>
   <button class="tile" data-go="habitos"><span class="k">Água hoje</span><span class="v">${copos} de ${D.metaAgua}</span></button>
@@ -356,6 +402,7 @@ function vInicio() {
   <button class="btn soft" id="pesado">Já estou melhor, mostrar tudo</button>`;
   return `
   <header class="top"><div class="brand">${TREE}Fluxo</div><button class="link" data-go="ajustes" id="go-ajustes">Ajustes</button></header>
+  ${offline ? SEM_NET : ""}
   ${D.demo ? '<p class="demo">Os itens que aparecem agora são exemplos. Em Ajustes dá para apagar tudo e começar do zero.</p>' : ""}
   <div><h1>${oi}</h1><p class="sub">${frase}</p></div>
   ${D.cfg.frase ? `<p class="quote">“${esc(D.cfg.frase)}”</p>` : ""}
@@ -366,7 +413,7 @@ function vInicio() {
     ${D.modulos.financas ? `<button class="tile" data-go="financas" id="tile-gasto"><span class="k">Gasto no mês</span><span class="v">${brl(gastoMes())}</span><span class="meta sub">de ${brl(D.fin.orcamento)}</span></button>` : ""}
   </div>
   ${D.modulos.agenda ? `<section class="card"><div class="card-head"><h2>Hoje</h2><button class="link" data-go="agenda">Agenda</button></div>
-    ${hoje.length ? `<ul class="list">${hoje.map(e => `<li class="item"><span class="dot" style="background:${CATS[e.cat] || "#999"}"></span><span class="grow"><span class="t">${esc(e.title)}</span></span><span class="meta">${esc(e.time)}</span></li>`).join("")}</ul>` : '<p class="empty">Nada marcado hoje.</p>'}</section>` : ""}
+    ${hoje.length ? `<ul class="list">${hoje.map(e => `<li class="item"><span class="dot" style="background:${CATS[e.cat] || "#999"}"></span><span class="grow"><span class="t">${esc(e.title)}</span></span><span class="meta">${hora(e)}</span></li>`).join("")}</ul>` : '<p class="empty">Nada marcado hoje.</p>'}</section>` : ""}
   ${D.modulos.casos ? `<section class="card"><div class="card-head"><h2>Casos com prazo</h2><button class="link" data-go="casos">Ver todos</button></div>
     ${casos.length ? `<ul class="list">${casos.map(c => `<li class="item"><span class="grow"><span class="t"><b>${esc(c.ini)}</b> · ${esc(c.tipo)}</span><br><span class="meta">${esc(ETAPAS[c.etapa])}</span></span>${prazoPill(c)}</li>`).join("")}</ul>` : '<p class="empty">Nenhum caso em andamento.</p>'}</section>` : ""}
   ${D.modulos.tarefas ? `<section class="card"><div class="card-head"><h2>Tarefas</h2><button class="link" data-go="tarefas">Ver todas</button></div>
@@ -381,7 +428,7 @@ function vInicio() {
 
 function taskItem(x) {
   return `<li class="item ${x.done ? "done" : ""}"><button class="check" aria-label="Concluir ${esc(x.t)}" aria-pressed="${x.done}" data-task="${x.id}"></button>
-    <span class="grow"><span class="t">${esc(x.t)}</span>${x.date ? `<br><span class="meta">${fmtDate(x.date)}</span>` : ""}</span>
+    <span class="grow"><span class="t">${esc(x.t)}</span>${x.date || (x.rep && x.rep !== "Não") ? `<br><span class="meta">${x.date ? fmtDate(x.date) : ""}${x.rep && x.rep !== "Não" ? (x.date ? " · " : "") + esc(x.rep.toLowerCase()) : ""}</span>` : ""}</span>
     <button class="edit" data-edit-task="${x.id}" aria-label="Editar">Editar</button></li>`;
 }
 function contaItem(c) {
@@ -397,22 +444,23 @@ function vAgenda() {
   const first = new Date(y, m - 1, 1), start = (first.getDay() + 6) % 7;
   const days = [];
   for (let i = 0; i < 42; i++) { const d = new Date(y, m - 1, 1 - start + i); days.push(iso(d)); }
-  const evDia = D.eventos.filter(e => e.date === agendaDia).sort((a, b) => a.time.localeCompare(b.time));
+  const evDia = todosEventos().filter(e => e.date === agendaDia).sort((a, b) => a.time.localeCompare(b.time));
   return `
   <div class="card-head"><h1>Agenda</h1><button class="btn" id="add-evento">+ Compromisso</button></div>
   <section class="card">
     <div class="card-head"><button class="link" id="mes-prev" aria-label="Mês anterior">‹</button><h2>${MES[m - 1]} de ${y}</h2><button class="link" id="mes-next" aria-label="Próximo mês">›</button></div>
     <div class="month">${["S","T","Q","Q","S","S","D"].map(w => `<span class="wd">${w}</span>`).join("")}
-      ${days.map(d => { const evs = D.eventos.filter(e => e.date === d); return `<button class="day ${ym(d) !== agendaMes ? "out" : ""} ${d === TODAY() ? "today" : ""}" data-dia="${d}" aria-pressed="${d === agendaDia}" aria-label="${fmtDate(d)}, ${evs.length} compromissos">${Number(d.slice(8))}<span class="dots">${evs.slice(0, 3).map(e => `<i style="background:${CATS[e.cat] || "#999"}"></i>`).join("")}</span></button>`; }).join("")}
+      ${days.map(d => { const evs = todosEventos().filter(e => e.date === d); return `<button class="day ${ym(d) !== agendaMes ? "out" : ""} ${d === TODAY() ? "today" : ""}" data-dia="${d}" aria-pressed="${d === agendaDia}" aria-label="${fmtDate(d)}, ${evs.length} compromissos">${Number(d.slice(8))}<span class="dots">${evs.slice(0, 3).map(e => `<i style="background:${CATS[e.cat] || "#999"}"></i>`).join("")}</span></button>`; }).join("")}
     </div>
     <div class="row" style="flex-wrap:wrap;gap:12px">${Object.entries(CATS).map(([k, c]) => `<span class="row meta" style="gap:5px;font-size:13px;color:var(--muted)"><span class="dot" style="background:${c}"></span>${k}</span>`).join("")}</div>
   </section>
   <section class="card"><h2>${fmtDate(agendaDia)}</h2>
-    ${evDia.length ? `<ul class="list">${evDia.map(e => `<li class="item"><span class="dot" style="background:${CATS[e.cat] || "#999"}"></span><span class="grow"><span class="t">${esc(e.title)}</span><br><span class="meta">${esc(e.time)} · ${esc(e.cat)}</span></span><button class="edit" data-edit-evento="${e.id}">Editar</button></li>`).join("")}</ul>` : '<p class="empty">Dia livre. Toque em “+ Compromisso” para marcar algo.</p>'}
+    ${evDia.length ? `<ul class="list">${evDia.map(e => `<li class="item"><span class="dot" style="background:${CATS[e.cat] || "#999"}"></span><span class="grow"><span class="t">${esc(e.title)}</span><br><span class="meta">${hora(e) || "Dia todo"} · ${esc(e.cat)}</span></span>${doGoogle(e) ? '<span class="pill">Google</span>' : `<button class="edit" data-edit-evento="${e.id}">Editar</button>`}</li>`).join("")}</ul>` : '<p class="empty">Dia livre. Toque em “+ Compromisso” para marcar algo.</p>'}
   </section>
-  <p class="empty">Lembretes: 1 dia antes e 1 hora antes. A ligação com o Google Agenda entra na versão final.</p>`;
+  <p class="empty">${D.cfg.ical ? "Os compromissos do Google aparecem em azul-acinzentado (só para ver)." : "Quer ver o Google Agenda aqui? Ligue em Ajustes → Google Agenda."} Lembretes: 1 dia antes e 1 hora antes (ative em Ajustes → Notificações).</p>`;
 }
-const evFields = [{ k: "title", l: "O quê", req: true }, { k: "date", l: "Dia", type: "date", req: true }, { k: "time", l: "Hora", type: "time" }, { k: "cat", l: "Categoria", type: "select", ops: Object.keys(CATS) }];
+const hora = (e) => esc(e.time) + (e.fim ? "–" + esc(e.fim) : "");
+const evFields = [{ k: "title", l: "O quê", req: true }, { k: "date", l: "Dia", type: "date", req: true }, { k: "time", l: "Começa", type: "time" }, { k: "fim", l: "Termina (opcional, para reservar um bloco de tempo)", type: "time" }, { k: "cat", l: "Categoria", type: "select", ops: Object.keys(CATS).filter(k => k !== "Google") }];
 
 function vCasos() {
   const ativos = D.casos.filter(c => c.etapa < ETAPAS.length - 1).sort((a, b) => (a.prazo || "9").localeCompare(b.prazo || "9"));
@@ -499,8 +547,24 @@ function vTarefas() {
   return `<div class="card-head"><h1>Tarefas</h1><button class="btn" id="add-tarefa">+ Tarefa</button></div>
   ${Object.entries(grupos).map(([k, xs]) => `<section class="card"><h2>${esc(k)}</h2><ul class="list">${xs.sort((a, b) => a.done - b.done).map(taskItem).join("")}</ul></section>`).join("") || '<p class="empty">Nenhuma tarefa.</p>'}`;
 }
-const tarefaFields = [{ k: "t", l: "Tarefa", req: true }, { k: "cat", l: "Categoria", type: "select", ops: ["Casa", "Contas", "Trabalho", "Pessoal", "Estudos", "Pets", "Metas do ano"] }, { k: "date", l: "Para quando (opcional)", type: "date" }];
+const tarefaFields = [{ k: "t", l: "Tarefa", req: true }, { k: "cat", l: "Categoria", type: "select", ops: ["Casa", "Contas", "Trabalho", "Pessoal", "Estudos", "Pets", "Metas do ano"] }, { k: "date", l: "Para quando (opcional)", type: "date" }, { k: "rep", l: "Repetir", type: "select", ops: ["Não", "Todo dia", "Toda semana", "Todo mês"] }];
 
+const INGREDIENTES = {
+  "crepioca": ["Goma de tapioca", "Ovos"], "tapioca": ["Goma de tapioca"], "cuscuz": ["Flocão de milho"], "omelete": ["Ovos", "Tomate", "Cebola"],
+  "ovo": ["Ovos"], "salada": ["Alface", "Tomate", "Pepino"], "sopa de legumes": ["Abóbora", "Cenoura", "Batata", "Chuchu"], "legumes": ["Cenoura", "Abobrinha", "Brócolis"],
+  "caldo de macaxeira": ["Macaxeira", "Peito de frango"], "caldo de frango": ["Peito de frango", "Batata", "Cenoura"], "purê de macaxeira": ["Macaxeira"], "macaxeira": ["Macaxeira"],
+  "panqueca de banana": ["Banana", "Ovos", "Aveia sem glúten"], "frutas": ["Frutas da semana"], "pão sem glúten": ["Pão sem glúten"], "wrap": ["Goma de tapioca"],
+  "frango": ["Peito de frango"], "peixe": ["Peixe"], "tambaqui": ["Tambaqui"], "atum": ["Atum em lata"], "carne moída": ["Carne moída"], "carne": ["Carne"],
+  "arroz": ["Arroz"], "feijão": ["Feijão"], "batata-doce": ["Batata-doce"], "batata": ["Batata"], "queijo sem lactose": ["Queijo sem lactose"], "tomate": ["Tomate"]
+};
+function ingredientes(prato) {
+  let t = " " + String(prato || "").toLowerCase() + " ";
+  if (/^\s*livre\s*$/.test(t)) return [];
+  const out = [];
+  Object.keys(INGREDIENTES).sort((a, b) => b.length - a.length).forEach(k => { if (t.includes(k)) { out.push(...INGREDIENTES[k]); t = t.split(k).join(" "); } });
+  t.split(/,| e | com | na | no | de | da | do |airfryer|grelhad[oa]|assad[oa]|desfiad[oa]/).map(x => x.trim()).filter(x => x.length > 2).forEach(x => out.push(x.charAt(0).toUpperCase() + x.slice(1)));
+  return out;
+}
 const RECEITAS = [
   ["Tapioca de frango desfiado", 15, "café ou jantar"], ["Omelete de legumes", 10, "jantar"], ["Crepioca com queijo sem lactose", 10, "café"],
   ["Frango grelhado com batata-doce na airfryer", 30, "almoço"], ["Tambaqui na airfryer com salada", 25, "almoço"], ["Cuscuz com ovo e tomate", 15, "café ou jantar"],
@@ -514,7 +578,7 @@ function vAlimentacao() {
   ${SEMANA.map(d => `<tr><td><b>${d}</b></td>${["cafe", "almoco", "jantar"].map(r => `<td><input aria-label="${r} de ${d}" data-card="${d}.${r}" value="${esc(D.cardapio[d][r])}"></td>`).join("")}</tr>`).join("")}
   </tbody></table></section>
   <section class="card"><h2>Ideias rápidas (até 30 min, sem lactose e sem glúten)</h2><ul class="list">${RECEITAS.map((r, i) => `<li class="item"><span class="grow"><span class="t">${esc(r[0])}</span><br><span class="meta">${r[1]} min · ${esc(r[2])}</span></span><button class="edit" data-receita="${i}">Pôr no jantar de hoje</button></li>`).join("")}</ul></section>
-  <button class="btn sage" id="gerar-lista">Mandar o cardápio para a lista de mercado (depois você ajusta)</button>
+  <button class="btn sage" id="gerar-lista">Mandar os ingredientes do cardápio para a lista de mercado</button>
   <p class="empty">Na versão final, o app sugere um cardápio rápido de fazer e monta a lista de mercado sozinho.</p>`;
 }
 function vMercado() {
@@ -529,7 +593,7 @@ function vTreino() {
   <section class="card"><div class="card-head"><h2>Últimos 7 dias</h2><span class="pill ${feitos >= 3 ? "ok" : ""}">${feitos} treino${feitos === 1 ? "" : "s"}</span></div>
     <div class="month" style="grid-template-columns:repeat(7,1fr)">${sem.map(d => `<button class="day ${d === t ? "today" : ""}" aria-pressed="${!!D.treinos[d]}" data-treino="${d}" aria-label="Treinei em ${fmtDate(d)}">${Number(d.slice(8))}<span class="dots"></span></button>`).join("")}</div>
     <p class="empty">Toque no dia para marcar que treinou. Toque de novo para desmarcar.</p></section>
-  ${D.treinos[t] ? `<section class="card"><h2>Treino de hoje</h2><button class="btn soft" id="treino-tempo">Tempo: ${D.treinos[t].min || 0} min · mudar</button></section>` : `<button class="btn" data-treino="${t}" id="treinei-hoje">Treinei hoje!</button>`}
+  ${D.treinos[t] ? `<section class="card"><h2>Treino de hoje</h2><button class="btn soft" id="treino-tempo">${D.treinos[t].min || 0} min${D.treinos[t].km ? ` · ${esc(D.treinos[t].km)} km` : ""} · mudar</button></section>` : `<button class="btn" data-treino="${t}" id="treinei-hoje">Treinei hoje!</button>`}
   <p class="empty">Na versão final dá para puxar o tempo do relógio Huawei, se ele permitir.</p>`;
 }
 const medalha = (s) => s >= 100 ? '<span class="pill ok">Medalha 100 dias</span>' : s >= 30 ? '<span class="pill ok">Medalha 30 dias</span>' : s >= 7 ? '<span class="pill ok">Medalha 7 dias</span>' : s >= 4 ? `<span class="pill">Faltam ${7 - s} para a medalha</span>` : "";
@@ -555,7 +619,7 @@ function resumoEndo() {
 }
 function vEndo() {
   const xs = D.endo.slice().sort((a, b) => b.date.localeCompare(a.date));
-  return `<div class="card-head"><h1>Diário de dor</h1><button class="btn" id="add-endo">+ Registro</button></div>
+  return `<div class="card-head"><h1>${esc(D.cfg.diario || "Diário de dor")}</h1><button class="btn" id="add-endo">+ Registro</button></div>
   <p class="sub">Só a dor, o remédio e a comida do dia, para levar à consulta.</p>
   <section class="card"><h2>Resumo para a consulta</h2><p class="sub" style="font-size:14px;white-space:pre-line">${esc(resumoEndo()).split("\n\n")[0]}</p><button class="btn soft" id="copiar-endo">Copiar resumo completo</button></section>
   <section class="card">${xs.length ? `<ul class="list">${xs.map(x => `<li class="item"><span class="grow"><span class="t">Dor ${esc(x.dor)} de 10${x.remedio ? " · " + esc(x.remedio) : ""}</span><br><span class="meta">${fmtDate(x.date)}${x.comida && x.comida !== "Não sei" ? " · comida: " + esc(x.comida.toLowerCase()) : ""}${x.obs ? " · " + esc(x.obs) : ""}</span></span><button class="edit" data-edit-endo="${x.id}">Editar</button></li>`).join("")}</ul>` : '<p class="empty">Nenhum registro.</p>'}</section>`;
@@ -576,18 +640,54 @@ function vPets() {
 }
 function vMais() {
   const desc = { tarefas: "Por categoria", alimentacao: "Sem lactose e glúten", mercado: "Sai do cardápio", treino: "Marcar os dias", habitos: "Água e sequências", estudos: "Cursos, leituras, testes", endo: "Dor, remédio e comida", lazer: "Para ver, ler e jogar", pets: "Vacina, vermífugo, banho" };
-  return `<h1>Mais</h1><div class="menu">${Object.keys(desc).filter(k => D.modulos[k]).map(k => `<button data-go="${k}" id="menu-${k}"><b>${MODULOS[k]}</b><span>${desc[k]}</span></button>`).join("")}
+  return `<h1>Mais</h1><div class="menu">${Object.keys(desc).filter(k => D.modulos[k]).map(k => `<button data-go="${k}" id="menu-${k}"><b>${k === "endo" && D.cfg.diario ? esc(D.cfg.diario) : MODULOS[k]}</b><span>${desc[k]}</span></button>`).join("")}
   <button data-go="ajustes" id="menu-ajustes"><b>Ajustes</b><span>Ligar e desligar partes</span></button></div>`;
+}
+const TIPOS_NOTIF = [["manha", "Resumo do dia de manhã"], ["eventos", "Compromissos (1 dia e 1 hora antes)"], ["agua", "Água ao longo do dia"], ["contas", "Contas 2 dias antes de vencer"], ["casos", "Prazos dos casos (1 dia antes)"], ["tarefas", "Tarefas do dia"], ["pets", "Pets"], ["desligar", "Hora de desligar"], ["mes", "Resumo do mês (último dia)"]];
+function silencios(txt) {
+  const out = []; const re = /(\d{1,2})[:h]?(\d{2})?\s*(?:–|-|às|a|até)\s*(\d{1,2})[:h]?(\d{2})?/gi; let m;
+  while ((m = re.exec(String(txt || "")))) out.push([Number(m[1]) * 60 + Number(m[2] || 0), Number(m[3]) * 60 + Number(m[4] || 0)]);
+  return out;
+}
+const hm = (min) => `${pad(Math.floor(min / 60) % 24)}:${pad(min % 60)}`;
+const instalado = () => window.navigator.standalone === true || (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
+const temPush = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+let notifMsg = "";
+function vNotif() {
+  const N = D.notif, fx = silencios(D.silencio);
+  let estado;
+  if (!FIREBASE || !user || user.offline) estado = '<p class="sub" style="font-size:14px">Entre na sua conta (com internet) para ativar.</p>';
+  else if (!temPush() || !instalado()) estado = `<p class="sub" style="font-size:14px">No iPhone, as notificações só funcionam com o Fluxo <b>instalado na tela de início</b> (iOS 16.4 ou mais novo):</p>
+    <ol class="sub" style="font-size:14px;margin:0;padding-left:20px"><li>Abra o Fluxo no <b>Safari</b>.</li><li>Toque no botão de compartilhar (quadrado com seta).</li><li>Toque em <b>“Adicionar à Tela de Início”</b> e depois em Adicionar.</li><li>Abra o Fluxo pelo ícone novo e volte aqui.</li></ol>`;
+  else if (N.ativas && Notification.permission === "granted") estado = '<span class="pill ok">Notificações ativadas</span><div class="row" style="flex-wrap:wrap"><button class="btn soft" id="notif-teste">Mandar um teste agora</button><button class="btn soft" id="notif-off">Desativar</button></div>';
+  else estado = `<button class="btn" id="notif-on">Ativar notificações</button>${Notification.permission === "denied" ? '<p class="sub" style="font-size:14px">O iPhone está bloqueando. Vá em Ajustes do iPhone → Notificações → Fluxo → Permitir.</p>' : ""}`;
+  return `<section class="card"><h2>Notificações</h2>${estado}${notifMsg ? `<p class="pill warn" style="white-space:normal">${esc(notifMsg)}</p>` : ""}
+    <p class="sub" style="font-size:14px">Escolha o que quer receber:</p>
+    ${TIPOS_NOTIF.map(([k, l]) => `<label class="switch" for="nt-${k}"><span>${l}</span><input type="checkbox" id="nt-${k}" data-notif="${k}" ${N[k] ? "checked" : ""}></label>`).join("")}
+    <div class="row" style="gap:12px;flex-wrap:wrap"><div class="field" style="flex:1;min-width:130px"><label for="nh-manha">Resumo da manhã às</label><input type="time" id="nh-manha" data-notif-hora="horaManha" value="${esc(N.horaManha)}"></div>
+    <div class="field" style="flex:1;min-width:130px"><label for="nh-desligar">Hora de desligar</label><input type="time" id="nh-desligar" data-notif-hora="horaDesligar" value="${esc(N.horaDesligar)}"></div></div>
+    <div class="field"><label for="silencio">Horários de silêncio</label><input id="silencio" value="${esc(D.silencio)}" placeholder="Exemplo: 08:30-12:30, 23:30-06:00"></div>
+    <p class="empty" id="silencio-lido">${fx.length ? "Entendi: " + fx.map(([a, b]) => `${hm(a)} às ${hm(b)}`).join(", ") + ". Avisos importantes que caírem aí chegam quando o silêncio acabar; os de água ficam para depois." : "Sem horário de silêncio."}</p>
+    <p class="empty">Os avisos chegam com até 15 minutos de diferença do horário marcado.</p></section>`;
+}
+function vGoogle() {
+  const st = !D.cfg.ical ? "" : gInfo.erro ? `<p class="pill late" style="white-space:normal">${esc(gInfo.erro)}</p>` : gInfo.atualizado ? `<span class="pill ok">${gEventos.length} compromisso(s) do Google · atualiza a cada 30 min</span>` : '<span class="pill warn">Ligado. Os compromissos aparecem em até 30 minutos.</span>';
+  return `<section class="card"><h2>Google Agenda</h2><p class="sub" style="font-size:14px">Seus compromissos do Google aparecem na agenda do Fluxo, só para ver, e entram nos lembretes.</p>
+    <div class="field"><label for="ical">Endereço secreto da sua agenda (formato iCal)</label><input id="ical" value="${esc(D.cfg.ical)}" placeholder="https://calendar.google.com/calendar/ical/..." autocomplete="off"></div>${st}
+    <details><summary class="sub" style="font-size:14px;cursor:pointer">Como pegar esse endereço (no computador)</summary><ol class="sub" style="font-size:14px;padding-left:20px">
+    <li>Abra <b>calendar.google.com</b>.</li><li>Clique na engrenagem → <b>Configurações</b>.</li><li>Na esquerda, em “Configurações das minhas agendas”, clique na sua agenda.</li>
+    <li>Desça até <b>“Integrar agenda”</b>.</li><li>Copie o <b>“Endereço secreto no formato iCal”</b> e cole aqui.</li></ol>
+    <p class="empty">Esse endereço é só seu: não mande para ninguém. Fica guardado na sua conta.</p></details></section>`;
 }
 function vAjustes() {
   return `<h1>Ajustes</h1>
   <section class="card"><h2>Meus dados</h2><p class="sub" style="font-size:14px">Nome, frase, pets, treino, salário e meta.</p><button class="btn soft" data-go="setup" id="meus-dados">Mudar meus dados</button></section>
   <section class="card"><h2>O que aparece no app</h2><p class="sub" style="font-size:14px">Desligue o que não usar. Some da tela, mas nada é apagado.</p>
     ${Object.entries(MODULOS).map(([k, l]) => `<label class="switch" for="mod-${k}"><span>${l}</span><input type="checkbox" id="mod-${k}" data-mod="${k}" ${D.modulos[k] ? "checked" : ""}></label>`).join("")}</section>
-  <section class="card"><h2>Lembretes</h2><p class="sub" style="font-size:14px">Resumo do dia de manhã · água ao longo do dia · cartão 2 dias antes · hora de desligar · pets.</p><p class="empty">Entram na versão final.</p></section>
-  <section class="card"><h2>Cópia de segurança</h2><p class="sub" style="font-size:14px">Seus dados ficam só neste celular. De vez em quando, faça uma cópia e guarde num e-mail para você.</p><div class="row" style="flex-wrap:wrap"><button class="btn soft" id="backup">Fazer cópia</button><button class="btn soft" id="restaurar">Restaurar cópia</button></div></section>
-  <section class="card"><h2>Horário de silêncio</h2><p class="sub">${esc(D.silencio)}</p><p class="empty">As notificações entram na versão final e respeitam esses horários.</p></section>
-  ${FIREBASE && user ? `<section class="card"><h2>Minha conta</h2><p class="sub" style="font-size:14px">${esc(user.email)} · ${nuvem === "erro" ? "sem conexão agora, salvo neste celular" : "tudo salvo na nuvem"}</p><button class="btn soft" id="sair">Sair da conta</button></section>` : ""}
+${vNotif()}
+  ${vGoogle()}
+  <section class="card"><h2>Cópia de segurança</h2><p class="sub" style="font-size:14px">Seus dados já ficam salvos na nuvem pela sua conta. Esta cópia é uma garantia a mais: guarde num e-mail para você de vez em quando.</p><div class="row" style="flex-wrap:wrap"><button class="btn soft" id="backup">Fazer cópia</button><button class="btn soft" id="restaurar">Restaurar cópia</button></div></section>
+  ${FIREBASE && user && !user.offline ? `<section class="card"><h2>Minha conta</h2><p class="sub" style="font-size:14px">${esc(user.email)} · ${nuvem === "erro" ? "sem conexão agora, salvo neste celular" : "tudo salvo na nuvem"}</p><button class="btn soft" id="sair">Sair da conta</button></section>` : ""}
   <section class="card"><h2>Começar do zero</h2><p class="sub" style="font-size:14px">Apaga os exemplos e todos os registros deste aparelho.</p><button class="btn danger" id="zerar">Apagar tudo</button></section>`;
 }
 
@@ -602,6 +702,7 @@ function vSetup() {
     ${f("pets", "Nomes dos pets, separados por vírgula (opcional)", c.pets.join(", "))}
     ${f("treino", "Qual treino você faz? (opcional)", c.treino, 'placeholder="Exemplo: karatê"')}
     ${f("salario", "Quando cai o salário? (opcional)", c.salario, 'placeholder="Exemplo: dia 5"')}
+    ${f("diario", "Nome do diário de saúde (opcional)", c.diario, 'placeholder="Diário de dor"')}
     ${f("meta", "Nome da sua meta de dinheiro", c.meta)}
     ${f("alvo", "Quanto precisa juntar (R$)", car.alvo || "", 'type="number" inputmode="decimal"')}
     ${f("guardado", "Quanto já tem guardado (R$)", car.guardado || "", 'type="number" inputmode="decimal"')}
@@ -630,7 +731,17 @@ document.addEventListener("click", (e) => {
   const b = e.target.closest("button"); if (!b) return;
   const ds = b.dataset;
   if (ds.go) return go(ds.go);
-  if (ds.task) { const x = byId(D.tarefas, ds.task); x.done = !x.done; save(); return render(); }
+  if (ds.task) {
+    const x = byId(D.tarefas, ds.task);
+    if (!x.done && x.rep && x.rep !== "Não") {
+      const base = x.date && x.date > TODAY() ? x.date : (x.date || TODAY());
+      if (x.rep === "Todo dia") x.date = addDays(base, 1);
+      else if (x.rep === "Toda semana") x.date = addDays(base, 7);
+      else { const d = new Date(base + "T12:00"); d.setMonth(d.getMonth() + 1); x.date = iso(d); }
+      x.feitas = (x.feitas || 0) + 1;
+    } else x.done = !x.done;
+    save(); return render();
+  }
   if (ds.editTask) { const x = byId(D.tarefas, ds.editTask); return form("Editar tarefa", tarefaFields, x, o => Object.assign(x, o), () => del(D.tarefas, x.id)); }
   if (ds.conta) { const c = byId(D.fin.contas, ds.conta), k = ym(TODAY()); c.pagos[k] = !c.pagos[k]; save(); return render(); }
   if (ds.editConta) { const c = byId(D.fin.contas, ds.editConta); return form("Editar conta", contaFields, c, o => Object.assign(c, o), () => del(D.fin.contas, c.id)); }
@@ -661,6 +772,9 @@ document.addEventListener("click", (e) => {
   if (ds.editLaz) { const x = byId(D.lazer, ds.editLaz); return form("Editar", lazFields, x, o => Object.assign(x, o), () => del(D.lazer, x.id)); }
 
   switch (b.id) {
+    case "notif-on": return ativarNotif();
+    case "notif-off": D.notif.ativas = false; save(); return render();
+    case "notif-teste": navigator.serviceWorker.ready.then(r => r.showNotification("Fluxo funcionando! 🌿", { body: "Assim chegam os seus lembretes.", icon: "icon-192.png" })).catch(() => { notifMsg = "Não deu para mostrar o teste."; render(); }); return;
     case "l-modo": loginModo = loginModo === "criar" ? "entrar" : "criar"; loginErro = ""; loginMsg = ""; return render();
     case "l-esqueci": {
       const email = $("#l-email").value.trim();
@@ -697,11 +811,11 @@ document.addEventListener("click", (e) => {
       const norm = (x) => x.toLowerCase().replace(/s$/, "");
       const ja = new Set(D.mercado.map(x => norm(x.t)));
       const itens = new Set();
-      SEMANA.forEach(d => ["cafe", "almoco", "jantar"].forEach(r => String(D.cardapio[d][r]).split(/,| e | com /).map(s => s.trim()).filter(s => s && !/^livre$/i.test(s)).forEach(s => itens.add(s.charAt(0).toUpperCase() + s.slice(1)))));
+      SEMANA.forEach(d => ["cafe", "almoco", "jantar"].forEach(r => ingredientes(D.cardapio[d][r]).forEach(s => itens.add(s))));
       let n = 0; itens.forEach(s => { if (!ja.has(norm(s))) { ja.add(norm(s)); D.mercado.push({ id: uid(), t: s, done: false }); n++; } });
       save(); view = "mercado"; render(); return;
     }
-    case "treino-tempo": { const t = TODAY(); return form("Tempo de treino", [{ k: "min", l: "Minutos", type: "number" }], D.treinos[t], o => D.treinos[t].min = o.min); }
+    case "treino-tempo": { const t = TODAY(); return form("Treino de hoje", [{ k: "min", l: "Tempo (minutos)", type: "number" }, { k: "km", l: "Distância em km (se tiver)", type: "number" }, { k: "obs", l: "Observação", type: "area" }], D.treinos[t], o => Object.assign(D.treinos[t], o)); }
     case "add-habito": return form("Novo hábito", [{ k: "nome", l: "Hábito", req: true }], {}, o => D.habitos.push({ id: uid(), dias: {}, ...o }));
     case "add-estudo": return form("Novo item de estudo", estFields, { tipo: "Curso" }, o => D.estudos.push({ id: uid(), done: false, ...o }));
     case "add-endo": return form("Registro de hoje", endoFields, { date: TODAY(), dor: 3 }, o => D.endo.push({ id: uid(), ...o }));
@@ -732,7 +846,7 @@ document.addEventListener("submit", (e) => {
   e.preventDefault();
   const v = (k) => document.getElementById("s-" + k).value.trim();
   D.nome = v("nome");
-  D.cfg = { frase: v("frase"), pets: v("pets").split(",").map(x => x.trim()).filter(Boolean), treino: v("treino"), salario: v("salario"), meta: v("meta") || "Meta" };
+  D.cfg = Object.assign({}, D.cfg, { frase: v("frase"), pets: v("pets").split(",").map(x => x.trim()).filter(Boolean), treino: v("treino"), salario: v("salario"), meta: v("meta") || "Meta", diario: v("diario") });
   D.fin.carro = { alvo: Number(v("alvo")) || 0, guardado: Number(v("guardado")) || 0, prazo: v("prazo") };
   D.metaLaudos = Number(v("laudos")) || 4;
   D.silencio = v("silencio");
@@ -746,6 +860,10 @@ document.addEventListener("input", (e) => {
 });
 document.addEventListener("change", (e) => {
   const t = e.target;
+  if (t.dataset.notif) { D.notif[t.dataset.notif] = t.checked; save(); }
+  if (t.dataset.notifHora && t.value) { D.notif[t.dataset.notifHora] = t.value; save(); }
+  if (t.id === "silencio") { D.silencio = t.value.trim(); save(); render(); }
+  if (t.id === "ical") { const v = t.value.trim(); if (v && !/^https:\/\//.test(v)) { alertaCampo(t, "Cole o endereço completo, começando com https://"); return; } D.cfg.ical = v; gInfo = {}; gEventos = []; save(); render(); }
   if (t.dataset.mod) { D.modulos[t.dataset.mod] = t.checked; save(); renderTabs(); }
 });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && $("#sheet").innerHTML) $("#sheet").innerHTML = ""; });
